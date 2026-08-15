@@ -795,3 +795,43 @@ dsh plugin --profile web add github:solstice621/dsh_dashboard
 
 - [ ] 用户重启 dsh 服务使 bundle 生效（重启后动态版 toksta-1 会再次消失，属预期——bundle 常驻接管；
       两个版本共用同一快照文件，数据连续）
+
+---
+
+## 三十、v8 修复 bundle 启动时序竞争（2026-08-16）✅ 已修复并部署
+
+> 现象：bundle 版安装到 web profile 并重启后，设置页「统计」报
+> `加载失败：SyntaxError: Unexpected token 'o', "not found" is not valid JSON`——/api/token-stats 404。
+
+### 排查链（全部实证）
+
+1. client bundle 注入成功（页面 HTML 有 dsh-token-stats/client.js）但 host 路由 404；
+2. `--dump-config` 合成配置含 token-stats 行；loadProfile 显示 bundle patch 正确
+   （`[{"insert":[{"id":"token-stats","name":"dsh-token-stats"}]}]`）；
+3. loader 树枚举：`include:token-stats` entry 存在且 fiber up；
+4. **探针**（node_modules 直改 + 重启）：`[dsh-token-stats] apply begin, webServer=NO`——
+   apply 执行了，但启动瞬间 `ctx.get('webServer')` 为 **undefined**；
+5. 枚举对比：启动完成后同一 entry 的 fiber ctx 里 webServer=YES；
+6. 手动 `loader.create({name:'dsh-token-stats'})`（启动后）→ apply 时 webServer 已在 → 路由 200。
+
+### 根因
+
+**include 树并行激活的启动时序竞争**：dsh-host-webserver（include:webserver）与
+dsh-token-stats 并行 apply，我们的 apply 先跑完（webServer 尚未 provide）→
+`ctx.get('webServer')` undefined → `if (webServer !== undefined)` 静默跳过路由注册。
+官方插件通过 **`inject` 声明硬依赖**等待服务就绪；bundle 版之前 `inject = []`。
+
+### 修复（bundle v8）
+
+- `lib/index.js`：`const inject = ['webServer']`（cordis 等待 webServer 提供后再 apply）；
+- 验证：重启后 `apply begin, webServer=YES`，`/api/token-stats` 200
+  （totalTokens 297,030,923 / 16 会话 / 102 轮，快照加载 + 增量同步正常）；
+- 动态插件版 host.js 不受影响（session 层启动时 webServer 早已就绪）；
+- 版本 1.0.0 → 1.0.1。
+
+### 踩坑记录
+
+- `pkill -f` 会匹配自身 bash 命令行（含相同字样）→ 自杀；用 `ps -eo pid,args | grep '[X]'` 技巧；
+- `/tmp` 文件在进程被杀时可能未写入；
+- systemd `Restart=on-failure` 遇 SIGKILL 会自动拉起（restart counter 可见）；
+- HMR 实验在用户层 patch 追加重复行会导致 `duplicate loader entry id: token-stats` 启动崩溃（已还原）。

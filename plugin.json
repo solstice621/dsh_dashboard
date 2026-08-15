@@ -5,7 +5,7 @@
   "name": "Token 用量统计（Codex 风格）",
   "bundle": {
     "packageName": "dsh-token-stats",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "install": "dsh plugin --profile web add github:solstice621/dsh_dashboard",
     "note": "bundle 版（lib/index.js + lib/client.js + cordis.patch.yml）为可安装包；动态插件版（host.js/client.js）继续用于会话内部署"
   },
