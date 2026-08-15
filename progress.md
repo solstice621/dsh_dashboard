@@ -521,3 +521,10 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - 第①步 Topics 标签（手动 30 秒或 PAT）；
 - 第③步 awesome-dsh-plugin PR（打包已完成，PR 材料随时可备）；
 - 第④步市场自动收录（①+② 完成后自动）。
+
+### 第二十节补充（Topics 已加）
+
+- 用户已在 GitHub 仓库页添加 Topics 并确认；抓取页面验证 7 个 topic 全部生效：
+  `dsh-plugin`、`deepseek-harness`、`dsh`、`cordis-plugin`、`token-usage`、`usage-stats`、`dashboard` ✅
+- README 重写为生态导向：安装（bundle）置顶、功能/验收/排错/边界/生态章节、徽章；
+  新增 MIT LICENSE（package.json 与徽章引用）。
