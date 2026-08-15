@@ -5,7 +5,7 @@
   "name": "Token 用量统计（Codex 风格）",
   "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
   "platforms": ["host", "client"],
-  "currentPackageId": "pkg-20",
+  "currentPackageId": "pkg-21",
   "packageHistory": [
     { "packageId": "pkg-9",  "note": "首版部署（plan §6 原码 + console.warn 修正）" },
     { "packageId": "pkg-10", "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用" },
@@ -18,7 +18,8 @@
     { "packageId": "pkg-17", "note": "v9（run-17）：格子 gap 归零、尺寸上限 12→14px 精确填充；容器 overflow-x:hidden + 月份行 overflow:hidden 根治滚动条闪现；自适应机制保留" },
     { "packageId": "pkg-18", "note": "v10（run-18）：空隙换回 2px（网格/月份行；图例不变），宽度公式、提示框贴边同步；滚动条根治与自适应机制不变" },
     { "packageId": "pkg-19", "note": "v11（run-19）：月份标签带年份「2026年8月」；格子空隙 2→1px、尺寸上限 14→16px，宽度公式同步" },
-    { "packageId": "pkg-20", "note": "v12（run-20）：悬停提示日期由「8月15日」改为「2026年8月15日」（年月日）" }
+    { "packageId": "pkg-20", "note": "v12（run-20）：悬停提示日期由「8月15日」改为「2026年8月15日」（年月日）" },
+    { "packageId": "pkg-21", "note": "v13（run-21）：底部月份标签去掉年份恢复「8月」；新增「每周用量」53 列×7 格柱状条（自下而上填充、最大周全满、其余按比例整数格、统一颜色），与热力图同构对齐" }
   ],
   "files": {
     "host": "host.js",

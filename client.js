@@ -6,9 +6,11 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v12（部署中；v11 = pkg-19）
-// v12 变更（仅 client.js）：
-//   悬停提示日期由「8月15日」改为「2026年8月15日」（年月日）
+// 版本：v13（部署中；v12 = pkg-20）
+// v13 变更（仅 client.js）：
+//   1. 底部月份标签去掉年份，恢复「8月」（悬停提示的年月日保留）
+//   2. 新增「每周用量」栏目：53 列 × 7 格柱状条（与热力图同构对齐），自下而上填充——
+//      用量最大的一列 7 格全满，其余按比例取整数格（round，有量至少 1 格），统一颜色
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -95,7 +97,7 @@ function buildGrid(days, colCount) {
     for (let m = mFirst; m <= mLast; m += 1) {
       if (m > lastLabelMonth) {
         lastLabelMonth = m
-        if (label === '') label = Math.floor(m / 12) + '年' + ((m % 12) + 1) + '月'
+        if (label === '') label = ((m % 12) + 1) + '月'
       }
     }
     monthLabels.push(label)
@@ -179,10 +181,34 @@ function Heatmap(props) {
           className: 'tks-cell tks-lv' + cellLevel(c.total, g.max) + edge,
         }, h('span', { className: 'tks-tip' }, tipText(c)))
       })))
+  // 每周柱状：每列 = 一周用量，7 格自下而上填充；最大周 7 格全满，其余按比例取整数格
+  const weekTotals = []
+  let maxWeek = 0
+  for (const w of g.weeks) {
+    let t = 0
+    for (const c of w) t += c.total
+    weekTotals.push(t)
+    if (t > maxWeek) maxWeek = t
+  }
+  const filledCount = weekTotals.map((t) =>
+    t <= 0 ? 0 : Math.max(1, Math.min(7, Math.round(7 * t / maxWeek))))
+  const weeklyCols = g.weeks.map((w, wi) =>
+    h('div', { key: wi, className: 'tks-col' },
+      w.map((c, ci) => {
+        // 自下而上：底格索引 6；ci >= 7 - filled 的格为满格
+        const full = ci >= 7 - filledCount[wi]
+        return h('div', {
+          key: ci,
+          className: 'tks-cell' + (full ? ' tks-week-full' : ' tks-lv0'),
+          title: w[0].date + ' ~ ' + w[6].date + ' 所在周 · ' + fmtTokens(weekTotals[wi]) + ' Token',
+        })
+      })))
   return h('div', { ref: wrapRef, className: 'tks-heatmap-wrap' },
     h('div', { className: 'tks-heatmap' }, columns),
     h('div', { className: 'tks-months' },
       g.monthLabels.map((m, i) => h('span', { key: i }, m))),
+    h('div', { className: 'tks-weekly-title' }, '每周用量'),
+    h('div', { className: 'tks-weekly' }, weeklyCols),
     h('div', { className: 'tks-legend' }, '少',
       h('span', { className: 'tks-cell tks-lv0' }),
       h('span', { className: 'tks-cell tks-lv1' }),
@@ -292,6 +318,10 @@ const CSS = [
   '.tks-months{display:flex;gap:1px;margin-top:6px;font-size:10px;opacity:.55;overflow:hidden}',
   // span 宽 = 格子宽，pitch = 格子宽 + 1px gap，与热力网格严格同宽对齐
   '.tks-months span{width:var(--tks-size,12px);overflow:visible;white-space:nowrap}',
+  // 每周用量：与热力图同构对齐（53 列，pitch 一致），自下而上填充
+  '.tks-weekly-title{font-size:11px;opacity:.55;margin-top:14px;margin-bottom:6px}',
+  '.tks-weekly{display:flex;gap:1px}',
+  '.tks-week-full{background:#e5764c}',
   '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',
 ].join('\n')
