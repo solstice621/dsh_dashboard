@@ -1,6 +1,7 @@
 {
   "pluginId": "toksta-5",
   "idPrefix": "toksta",
+  "repo": "~/dsh-dashboard",
   "name": "Token 用量统计（Codex 风格）",
   "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
   "platforms": ["host", "client"],

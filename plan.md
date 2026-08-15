@@ -624,7 +624,7 @@ return {
 ## 7. 部署步骤（在有 cordis_* 工具的 web 会话中执行）
 
 本会话（CLI/headless）没有 cordis 工具；请打开 **web profile 的会话**（浏览器 UI），
-把本文件交给那里的 agent，或直接说「按 token-stats-plugin-plan.md 部署插件」。
+把本文件交给那里的 agent，或直接说「按 ~/dsh-dashboard 仓库（README.md）部署插件」。
 标准流程：
 
 1. `cordis_inspect_list` → 拿到 Host/Client Provider 目录。
