@@ -6,11 +6,11 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v13（部署中；v12 = pkg-20）
-// v13 变更（仅 client.js）：
-//   1. 底部月份标签去掉年份，恢复「8月」（悬停提示的年月日保留）
-//   2. 新增「每周用量」栏目：53 列 × 7 格柱状条（与热力图同构对齐），自下而上填充——
-//      用量最大的一列 7 格全满，其余按比例取整数格（round，有量至少 1 格），统一颜色
+// 版本：v14（部署中；v13 = pkg-21）
+// v14 变更（仅 client.js）：
+//   1. 「每周用量」改为视图切换：热力图右上方新增「每日 / 每周」按钮，
+//      每周视图显示 53 列 × 7 格柱状条（自下而上填充、最大周全满、按比例整数格）
+//   2. 每周格子悬停同样显示自定义气泡（周范围 + 周总用量），与每日视图一致的交互
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -46,15 +46,23 @@ function cellLevel(v, max) {
   if (r >= 0.18) return 2
   return 1
 }
+// 日期头部：「2026年8月15日」
+function dateHead(date) {
+  const y = parseInt(date.slice(0, 4), 10)
+  const m = parseInt(date.slice(5, 7), 10)
+  const d = parseInt(date.slice(8, 10), 10)
+  return y + '年' + m + '月' + d + '日'
+}
 // 悬停提示文案：「2026年8月15日消耗了 27.3 万 Token · 34 次请求」
 function tipText(cell) {
-  const y = parseInt(cell.date.slice(0, 4), 10)
-  const m = parseInt(cell.date.slice(5, 7), 10)
-  const d = parseInt(cell.date.slice(8, 10), 10)
-  const head = y + '年' + m + '月' + d + '日'
+  const head = dateHead(cell.date)
   return cell.total > 0
     ? head + '消耗了 ' + fmtTokens(cell.total) + ' Token · ' + cell.requests + ' 次请求'
     : head + '没有 Token 消耗'
+}
+// 每周悬停提示：「2026年8月9日 ~ 2026年8月15日 所在周消耗了 27.3 万 Token」
+function weekTipText(start, end, total) {
+  return dateHead(start) + ' ~ ' + dateHead(end) + ' 所在周消耗了 ' + fmtTokens(total) + ' Token'
 }
 // 网格列数：53 列 ≈ 一年（与参考截图一致），最后一列以今天结尾
 const GRID_COLUMNS = 53
@@ -192,29 +200,35 @@ function Heatmap(props) {
   }
   const filledCount = weekTotals.map((t) =>
     t <= 0 ? 0 : Math.max(1, Math.min(7, Math.round(7 * t / maxWeek))))
-  const weeklyCols = g.weeks.map((w, wi) =>
-    h('div', { key: wi, className: 'tks-col' },
+  const weeklyCols = g.weeks.map((w, wi) => {
+    let edge = ''
+    if (wi < 8) edge = ' tks-tip-left'
+    else if (wi >= colCount - 2) edge = ' tks-tip-right'
+    const tip = weekTipText(w[0].date, w[6].date, weekTotals[wi])
+    return h('div', { key: wi, className: 'tks-col' },
       w.map((c, ci) => {
         // 自下而上：底格索引 6；ci >= 7 - filled 的格为满格
         const full = ci >= 7 - filledCount[wi]
         return h('div', {
           key: ci,
-          className: 'tks-cell' + (full ? ' tks-week-full' : ' tks-lv0'),
-          title: w[0].date + ' ~ ' + w[6].date + ' 所在周 · ' + fmtTokens(weekTotals[wi]) + ' Token',
-        })
-      })))
+          className: 'tks-cell' + (full ? ' tks-week-full' : ' tks-lv0') + edge,
+        }, h('span', { className: 'tks-tip' }, tip))
+      }))
+  })
   return h('div', { ref: wrapRef, className: 'tks-heatmap-wrap' },
-    h('div', { className: 'tks-heatmap' }, columns),
+    props.view === 'weekly'
+      ? h('div', { className: 'tks-weekly' }, weeklyCols)
+      : h('div', { className: 'tks-heatmap' }, columns),
     h('div', { className: 'tks-months' },
       g.monthLabels.map((m, i) => h('span', { key: i }, m))),
-    h('div', { className: 'tks-weekly-title' }, '每周用量'),
-    h('div', { className: 'tks-weekly' }, weeklyCols),
-    h('div', { className: 'tks-legend' }, '少',
-      h('span', { className: 'tks-cell tks-lv0' }),
-      h('span', { className: 'tks-cell tks-lv1' }),
-      h('span', { className: 'tks-cell tks-lv2' }),
-      h('span', { className: 'tks-cell tks-lv3' }),
-      h('span', { className: 'tks-cell tks-lv4' }), '多'))
+    props.view === 'daily'
+      ? h('div', { className: 'tks-legend' }, '少',
+        h('span', { className: 'tks-cell tks-lv0' }),
+        h('span', { className: 'tks-cell tks-lv1' }),
+        h('span', { className: 'tks-cell tks-lv2' }),
+        h('span', { className: 'tks-cell tks-lv3' }),
+        h('span', { className: 'tks-cell tks-lv4' }), '多')
+      : null)
 }
 
 function Dashboard(props) {
@@ -222,6 +236,8 @@ function Dashboard(props) {
   const data = st[0]; const setData = st[1]
   const errSt = React.useState(null)
   const error = errSt[0]; const setError = errSt[1]
+  const viewSt = React.useState('daily')
+  const view = viewSt[0]; const setView = viewSt[1]
   const load = function () {
     host.call('get-stats').then(setData, (e) => setError(String(e)))
   }
@@ -260,8 +276,17 @@ function Dashboard(props) {
       h(StatCard, { value: data.streakLongest + ' 天', label: '最长连续天数' })),
     h('div', { className: 'tks-activity' },
       h('div', { className: 'tks-activity-head' },
-        h('span', { className: 'tks-activity-title' }, 'Token 活动')),
-      h(Heatmap, { days: data.days })))
+        h('span', { className: 'tks-activity-title' }, 'Token 活动'),
+        h('div', { className: 'tks-tabs' },
+          h('button', {
+            className: 'tks-tab' + (view === 'daily' ? ' active' : ''),
+            onClick: () => setView('daily'),
+          }, '每日'),
+          h('button', {
+            className: 'tks-tab' + (view === 'weekly' ? ' active' : ''),
+            onClick: () => setView('weekly'),
+          }, '每周'))),
+      h(Heatmap, { days: data.days, view: view })))
 }
 
 function RunCard() {
@@ -294,6 +319,9 @@ const CSS = [
   '.tks-card-sub{font-size:11px;opacity:.45;margin-top:4px}',
   '.tks-activity-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}',
   '.tks-activity-title{font-size:15px;font-weight:600}',
+  '.tks-tabs{display:flex;gap:2px}',
+  '.tks-tab{border:none;background:none;font-size:13px;padding:4px 8px;cursor:pointer;opacity:.5;color:inherit}',
+  '.tks-tab.active{opacity:1;font-weight:600;border-bottom:2px solid currentColor}',
   // 顶部留白 22px 给首行方块的悬停提示（提示框已缩小）
   // overflow-x:hidden：稳态格子必然 ≤ 容器宽（fit 精确填充），不需要滚动条；
   //   旧版 auto 时，月份行 nowrap 标签文字溢出会把 scrollWidth 撑过 clientWidth，
@@ -318,8 +346,7 @@ const CSS = [
   '.tks-months{display:flex;gap:1px;margin-top:6px;font-size:10px;opacity:.55;overflow:hidden}',
   // span 宽 = 格子宽，pitch = 格子宽 + 1px gap，与热力网格严格同宽对齐
   '.tks-months span{width:var(--tks-size,12px);overflow:visible;white-space:nowrap}',
-  // 每周用量：与热力图同构对齐（53 列，pitch 一致），自下而上填充
-  '.tks-weekly-title{font-size:11px;opacity:.55;margin-top:14px;margin-bottom:6px}',
+  // 每周视图：与热力图同构对齐（53 列，pitch 一致），自下而上填充
   '.tks-weekly{display:flex;gap:1px}',
   '.tks-week-full{background:#e5764c}',
   '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
