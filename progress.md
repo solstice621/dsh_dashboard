@@ -591,3 +591,30 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - 语法通过（动态 CJS 模式 / bundle ESM）；
 - `tf('valDays', {n:1})`：en → `1`、zh → `1 天` ✅；
 - label 读快照逻辑：snapshot.en → `Stats`、snapshot.zh → `统计` ✅。
+
+---
+
+## 二十三、v21 修复「升级后累计数跳变」（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-29` / `run-29`（host v5 + client v21，cordis_define kind=existing + update 激活）；
+> `plugin.json` 已回填。bundle 版 lib/index.js、lib/client.js 同步修复。
+
+### 调查结论（详见对话）
+
+- 数据无丢失：全量折叠 12 会话 = 204,826,900 Token（908 请求），无 compaction、日志完整；
+- 链路逐项排除：listSessions 全目录、readSession 全量（live 会话内存 log 只追加不裁剪）、水位线不重不漏；
+- 真因：每次 `cordis_run update` 重启 Host 半区 → 内存聚合清零 → 逐会话异步回补；
+  回补完成前 `get-stats` 返回**部分累计** → 面板/Run 卡片显示"跳水"数字。
+
+### 修复（host v5 + client v21）
+
+| 端 | 改动 |
+| --- | --- |
+| Host | backfill 并行化：`Promise.all` 并发折叠全部会话（原逐会话 await，窗口几十秒→约 2s） |
+| Client | 扫描期间不显示部分数字：`data.scanning && !data.ready` 时显示「正在扫描历史会话（x/y）…」占位页（RunCard 显示「加载中…」）；轮询间隔自适应 2s（扫描中）/ 30s（就绪），扫描结束即呈现完整数字 |
+
+### 验证
+
+- `node --check` 全部通过（动态 CJS / bundle ESM）；
+- bundle host 并行折叠端到端：真实日志并发喂入 → 路由返回 200，totalTokens 213M+（日志持续增长中）、
+  水位线去重正确、无重复计数 ✅。

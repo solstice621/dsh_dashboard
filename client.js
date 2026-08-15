@@ -7,12 +7,13 @@
 //     locale（可选：getLocale().active ∈ zh|en，跟随 DSH 语言切换中/英 UI）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v19（部署中；v18 = pkg-26）
-// v19 变更（仅 client.js，i18n）：
-//   1. 全部用户可见文案进 DICT（zh/en 双语），locale.getLocale().active === 'zh' 时中文，
-//      其他（en）时英文；locale.subscribe 订阅切换并重渲染
-//   2. 数值/时长/日期/月份标签双语格式：zh 亿·万 / X 小时 Y 分 / 2026年8月15日 / 8月；
-//      en B·M·k / 7h 20m / Aug 15, 2026 / Aug
+// 版本：v21（部署中；v20 = pkg-28）
+// v21 变更（配合 host v5 并行回补）：
+//   1. 扫描期间不显示部分数字（避免升级/重启后累计数跳变）：data.scanning && !ready 时
+//      显示「正在扫描历史会话（x/y）…」占位页，就绪后一次呈现完整数字
+//   2. 轮询间隔自适应：扫描中 2s（尽快结束占位），就绪后 30s；RunCard 同逻辑
+// （v19 起为 i18n 双语：跟随 DSH locale，zh/en 文案、数值、日期、月份标签双语格式；
+//  v20 修复：连续天数单位走 i18n、设置面板 label 直接读 locale 快照、RunCard 冒号按语言）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -384,11 +385,20 @@ function Dashboard(props) {
   }
   React.useEffect(() => {
     load()
-    const t = startInterval(load, 30000) // 每 30s 自动刷新一次
+    // 扫描期间 2s 轮询，就绪后 30s
+    const delay = data && data.scanning ? 2000 : 30000
+    const t = startInterval(load, delay)
     return t || undefined
-  }, [])
+  }, [data ? data.scanning : false])
   if (error) return h('div', { className: 'tks-root' }, t('loadFailed'), error)
   if (!data) return h('div', { className: 'tks-root' }, t('loading'))
+  // 扫描期不显示部分数字（避免升级/重启后累计数跳变），显示进度占位
+  if (data.scanning && !data.ready) {
+    return h('div', { className: 'tks-root' },
+      h('div', { className: 'tks-title' }, t('title')),
+      h('div', { className: 'tks-subtitle' },
+        tf('scanning', { done: data.scannedSessions, total: data.totalSessions })))
+  }
   return h('div', { className: 'tks-root' },
     h('div', { className: 'tks-header' },
       h('div', null,
@@ -433,10 +443,16 @@ function RunCard() {
   useT() // 语言切换时重渲染
   const st = React.useState(null)
   const data = st[0]; const setData = st[1]
-  React.useEffect(() => {
+  const load = function () {
     host.call('get-stats').then(setData, () => {})
-  }, [])
-  if (!data) return h('div', null, t('loading'))
+  }
+  React.useEffect(() => {
+    load()
+    const delay = data && data.scanning ? 2000 : 30000
+    const t = startInterval(load, delay)
+    return t || undefined
+  }, [data ? data.scanning : false])
+  if (!data || (data.scanning && !data.ready)) return h('div', null, t('loading'))
   return h('div', { className: 'tks-runcard' },
     h('b', null, activeLang === 'en' ? t('title') + ': ' : t('title') + '：'),
     tf('runTotal', {

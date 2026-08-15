@@ -6,12 +6,10 @@
 //   - Host Service：sessionQuery（listSessions / readSession）
 //   - Host Event：  session/event（emit，(session, event)）、session/created（emit，(session)）
 //   - Host Builtin：harness（handle）
-// 版本：v4（随客户端 v15 一起部署 = pkg-23；v3 对应 pkg-11~22）
-// v4 变更：
-//   1. 新增 request/header 事件折叠：记录每会话最近一次 provider/model，供 usage 归属
-//   2. assistant/message 折叠时按模型累计 tokens/requests（modelStats）
-//   3. buildPayload 新增：totalTurns / totalChatMs / totalInput / totalOutput /
-//      totalCacheRead / models[]（provider/model 排名，token 降序，unknown 不展示）
+// 版本：v5（随客户端 v21 一起部署 = pkg-29；v4 对应 pkg-23~28）
+// v5 变更：
+//   回补并行化：backfill 用 Promise.all 并发折叠全部会话（原为逐会话 await，窗口几十秒→约 2s）；
+//   配合客户端"扫描期不显示部分数字"，升级/重启后累计数不再跳变
 
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
 function dayKeyOf(time) {
@@ -138,13 +136,16 @@ return {
       scanning = true
       try {
         const list = await sessionQuery.listSessions()
+        // 并发折叠全部会话（水位线去重保证与实时增量不重不漏）
+        const jobs = []
         for (const item of list || []) {
           if (disposed) return
           const header = item && item.header
           if (!header || !header.id) continue
           sessionRec(header.id, header.createdAt)
-          await foldSession(header.id)
+          jobs.push(foldSession(header.id))
         }
+        await Promise.all(jobs)
       } catch (e) {
         console.error('[token-stats] listSessions failed:', e)
       } finally {
