@@ -2,7 +2,7 @@
 
 > 记录时间：2026-08-15 21:25 CST（首次）；2026-08-15 深夜（部署完成更新）
 > 关联文档：`~/token-stats-plugin-plan.md`（完整策划 + 可部署代码）
-> 状态：**已部署并运行中** ✅（见下方「部署记录」）；源码已归档至 git 仓库 `~/dsh-dashboard`（main @ 64a88fc）
+> 状态：**已部署并运行中** ✅（见下方「部署记录」）；源码已归档至 git 仓库 `~/dsh-dashboard`（main @ 64a88fc，远程 `git@github.com:solstice621/dsh_dashboard.git`）
 
 ---
 
