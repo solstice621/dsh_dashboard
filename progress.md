@@ -441,3 +441,19 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
   totalTurns=70、totalChatMs≈5h、缓存命中率 98%、无错误日志；
 - 模型排名归因正确：`deepseek-official/deepseek-v4-flash` 8816万 → `opencode-go/deepseek-v4-pro` 3221万
   → `opencode-go/kimi-k3` 275万 → `opencode-go/deepseek-v4-flash` 11万 ✅
+
+---
+
+## 十七、v16 迭代（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-24` / `run-24`（cordis_define kind=existing + update 激活）；`plugin.json` 已回填。
+
+### 用户反馈（针对 v15）
+
+热力图下面的「少 □□□□□ 多」颜色图例可以删除。
+
+### 改动（仅 `client.js`）
+
+- 移除 Heatmap 渲染中的图例元素（`少 + lv0..lv4 + 多`）；
+- 移除 `.tks-legend` CSS 规则；`grep` 确认 `tks-legend` 零残留；
+- `node --check` 语法通过。

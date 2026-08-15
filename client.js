@@ -6,11 +6,9 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v15（部署中；v14 = pkg-22）
-// v15 变更（host.js 同步升级为 v4 随包部署）：
-//   1. 热力图下方新增平行两栏：「洞察」（聊天总数/LLM 请求数/会话数/活跃天数/缓存命中率/
-//      平均每轮 Token/平均每轮时长）与「最喜欢的模型」（provider/model 用量排名 Top5 + 比例条）
-//   2. 数据来自 host 新增的 request/header 模型归属与洞察聚合（见 host.js v4）
+// 版本：v16（部署中；v15 = pkg-23）
+// v16 变更（仅 client.js）：
+//   删除热力图下方的「少 □□□□□ 多」颜色图例（含 CSS 规则）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -220,15 +218,7 @@ function Heatmap(props) {
       ? h('div', { className: 'tks-weekly' }, weeklyCols)
       : h('div', { className: 'tks-heatmap' }, columns),
     h('div', { className: 'tks-months' },
-      g.monthLabels.map((m, i) => h('span', { key: i }, m))),
-    props.view === 'daily'
-      ? h('div', { className: 'tks-legend' }, '少',
-        h('span', { className: 'tks-cell tks-lv0' }),
-        h('span', { className: 'tks-cell tks-lv1' }),
-        h('span', { className: 'tks-cell tks-lv2' }),
-        h('span', { className: 'tks-cell tks-lv3' }),
-        h('span', { className: 'tks-cell tks-lv4' }), '多')
-      : null)
+      g.monthLabels.map((m, i) => h('span', { key: i }, m))))
 }
 
 function Dashboard(props) {
@@ -411,7 +401,6 @@ const CSS = [
   '.tks-model-val{font-weight:600;flex-shrink:0}',
   '.tks-model-bar-wrap{height:6px;border-radius:3px;background:rgba(128,128,128,.15);overflow:hidden}',
   '.tks-model-bar{height:100%;border-radius:3px;background:#e5764c}',
-  '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',
 ].join('\n')
 
