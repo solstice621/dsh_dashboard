@@ -491,3 +491,33 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - 设置页入口 label：`'Token 用量'` → `'统计'`；
 - 页面标题：`'Token 用量'` → `'统计'`；
 - Run 卡片：`'Token 用量：'` → `'统计：'`，「设置 → Token 用量」→「设置 → 统计」。
+
+---
+
+## 二十、bundle 打包（2026-08-15）✅ 可安装包完成
+
+> 目标：加入 GitHub dsh 生态（第②步：打包成可安装插件）。
+
+### 产物（仓库根目录即 npm 包 `dsh-token-stats`）
+
+| 文件 | 说明 |
+| --- | --- |
+| `package.json` | `type: module`；`main: lib/index.js`；exports `.`/`./client`；`dsh.bundle.patch` → `cordis.patch.yml`；`dsh.client { inject: [client-runtime, ui-slots, ui-settings-general], platform: web }`（参考 Make0209/dsh-usage-stats 官方社区格式） |
+| `cordis.patch.yml` | `- insert: - { id: token-stats, name: dsh-token-stats }` |
+| `lib/index.js` | Host：与动态版 host.js 同源折叠逻辑；数据出口改为 `webServer.register({kind:'exact', path, handler})`（`GET /api/token-stats`、`POST /api/token-stats/rescan`），不依赖 harness RPC |
+| `lib/client.js` | Client：`window.__ModuleLoader__.load({id, factory})` 工厂；`exports.inject=['timer']`、`apply(ctx)` 注册「设置 → 统计」；数据用 `fetch('/api/token-stats')`；样式经 `<style>` 注入并随 dispose 移除；去掉动态版专属的 tool.view.cordis RunCard |
+
+### 验证（本机）
+
+1. `node --check` 两端通过；
+2. **host 端到端**：ESM 导入 `lib/index.js`，假 ctx + 真实会话日志喂入 → 路由 `/api/token-stats` 返回 200，
+   totalTokens=152,048,419 / turns=75 / 4 个模型（Top：deepseek-official/deepseek-v4-flash）✅；
+3. **client 工厂冒烟**：stub window/document 执行 factory → `exports.inject=['timer']`、`apply` 为函数 ✅；
+4. **真实安装**：`corepack enable pnpm`（pnpm 11.21.0）→ `dsh plugin --profile headless add file:...` 成功，
+   `dsh.profile.bundles` 出现 `dsh-token-stats`，`--dump-config` 合成配置正确插入插件行；测试后已 remove 还原 ✅。
+
+### 下一步（用户可选项）
+
+- 第①步 Topics 标签（手动 30 秒或 PAT）；
+- 第③步 awesome-dsh-plugin PR（打包已完成，PR 材料随时可备）；
+- 第④步市场自动收录（①+② 完成后自动）。

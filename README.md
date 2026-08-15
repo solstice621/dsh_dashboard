@@ -63,3 +63,22 @@
 2. 按模型/会话拆分（`request/header` 的 `config.model` 关联）
 3. Top 会话排行榜
 4. 主题色接入（`Theme.listTokens` + CSS 变量）
+
+## 作为可安装 bundle 使用（dsh 生态标准格式）
+
+仓库根目录即 npm 包 **`dsh-token-stats`**（`dsh.bundle` 声明），可被 `dsh plugin add` 直接安装：
+
+```sh
+dsh plugin --profile web add github:solstice621/dsh_dashboard
+# 或本地路径：dsh plugin --profile web add file:/path/to/dsh-dashboard
+dsh --profile web   # 重启后生效
+```
+
+- **Host 半**：`lib/index.js`（折叠逻辑 + `GET /api/token-stats` / `POST /api/token-stats/rescan` 路由供数）
+- **Client 半**：`lib/client.js`（`window.__ModuleLoader__.load` 工厂，注册「设置 → 统计」分区）
+- **patch**：`cordis.patch.yml` 插入 `id: token-stats` 插件行
+- 注意：bundle 版与动态插件版（本会话 `cordis_define` 部署的 toksta-5）会注册同一个
+  `settings.section` id `token-stats`，两者同时存在会重复；切换使用时先停掉另一方。
+
+> 已在本机验证：`dsh plugin --profile headless add file:...` 安装成功、合成配置正确插入插件行、
+> host 路由在真实日志上端到端返回正确 JSON、client 工厂形状正确（详见 progress.md 第二十节）。
