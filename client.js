@@ -7,13 +7,13 @@
 //     locale（可选：getLocale().active ∈ zh|en，跟随 DSH 语言切换中/英 UI）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v21（部署中；v20 = pkg-28）
-// v21 变更（配合 host v5 并行回补）：
-//   1. 扫描期间不显示部分数字（避免升级/重启后累计数跳变）：data.scanning && !ready 时
-//      显示「正在扫描历史会话（x/y）…」占位页，就绪后一次呈现完整数字
-//   2. 轮询间隔自适应：扫描中 2s（尽快结束占位），就绪后 30s；RunCard 同逻辑
-// （v19 起为 i18n 双语：跟随 DSH locale，zh/en 文案、数值、日期、月份标签双语格式；
-//  v20 修复：连续天数单位走 i18n、设置面板 label 直接读 locale 快照、RunCard 冒号按语言）
+// 版本：v24（部署中；v23 = pkg-33）
+// v24 变更（仅 client.js，修复「热力图颜色无区分」）：
+//   色阶改为对数+线性混合 6 档（新增 lv5 深砖红 #a83a12）：单一大峰值日时对数刻度
+//   会把多数活跃日压进同一档（如 1.95亿 与 4,856万 都是 lv4）；混合线性分量后
+//   大值拉开梯度（1.95亿→lv5、4,856万→lv4、百万→lv3、十万以下→lv2、微量→lv1）
+// （v21 起：扫描期不显示部分数字 + 2s/30s 自适应轮询；v19 起 i18n 双语；
+//  v20 修复英文残留；v22/v23 host v6 修复活跃会话丢失）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -151,9 +151,14 @@ function fmtDuration(ms) {
 }
 function cellLevel(v, max) {
   if (!v || max <= 0) return 0
-  const r = Math.log(v + 1) / Math.log(max + 1)
-  if (r >= 0.75) return 4
-  if (r >= 0.45) return 3
+  // 对数+线性混合 6 档：对数为主（偏斜数据）、线性为辅（大值拉开梯度），
+  // 避免单一大峰值日把多数活跃日压进同一档（修复「热力图颜色无区分」）
+  const lr = Math.log(v + 1) / Math.log(max + 1)
+  const rr = v / max
+  const r = 0.55 * lr + 0.45 * rr
+  if (r >= 0.85) return 5
+  if (r >= 0.6) return 4
+  if (r >= 0.38) return 3
   if (r >= 0.18) return 2
   return 1
 }
@@ -493,6 +498,7 @@ const CSS = [
   '.tks-lv2{background:#ef9f7d}',
   '.tks-lv3{background:#e5764c}',
   '.tks-lv4{background:#c74e24}',
+  '.tks-lv5{background:#a83a12}',
   // 自定义悬停提示：纯 CSS 跟随 :hover，不依赖 window/document
   '.tks-tip{display:none;position:absolute;bottom:13px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(32,32,32,.94);color:#fafafa;font-size:10px;line-height:1.45;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}',
   '.tks-cell:hover .tks-tip{display:block}',

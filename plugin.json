@@ -10,32 +10,108 @@
     "note": "bundle 版（lib/index.js + lib/client.js + cordis.patch.yml）为可安装包；动态插件版（host.js/client.js）继续用于会话内部署"
   },
   "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
-  "platforms": ["host", "client"],
-  "currentPackageId": "pkg-33",
+  "platforms": [
+    "host",
+    "client"
+  ],
+  "currentPackageId": "pkg-34",
   "packageHistory": [
-    { "packageId": "pkg-9",  "note": "首版部署（plan §6 原码 + console.warn 修正）" },
-    { "packageId": "pkg-10", "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用" },
-    { "packageId": "pkg-11", "note": "修复样式丢失：styles 是 Builtin 非 ctx Service，改为直接 styles.insert(CSS)" },
-    { "packageId": "pkg-12", "note": "v4（run-12）：热力图悬停提示、移除每周/累计 tab 改按日历年分页、统计卡数值 FitValue 自适应单行、各卡标签同高" },
-    { "packageId": "pkg-13", "note": "v5（run-13）：热力图改 53 列滚动视图（今天恒在最右下角），移除 1月1日 起点与按年分页" },
-    { "packageId": "pkg-14", "note": "v6（run-14）：月份标签锚定含当月1日的列（GitHub 同款）+ 月份行与格子同宽 + 格子尺寸随容器自适应（--tks-size 4~12px）消除横向滚动条" },
-    { "packageId": "pkg-15", "note": "v7（run-15）：观感微调——标题与热力图间距 44→30px（提示框缩小、顶部留白 32→22px），格子空隙 3px→2px（网格/月份行/图例），宽度公式同步" },
-    { "packageId": "pkg-16", "note": "v8（run-16）：格子空隙 2→1px；热力图整体水平居中（align-items:safe center），窄容器填满与统计卡左右对齐、超 12px 上限的余量居中" },
-    { "packageId": "pkg-17", "note": "v9（run-17）：格子 gap 归零、尺寸上限 12→14px 精确填充；容器 overflow-x:hidden + 月份行 overflow:hidden 根治滚动条闪现；自适应机制保留" },
-    { "packageId": "pkg-18", "note": "v10（run-18）：空隙换回 2px（网格/月份行；图例不变），宽度公式、提示框贴边同步；滚动条根治与自适应机制不变" },
-    { "packageId": "pkg-19", "note": "v11（run-19）：月份标签带年份「2026年8月」；格子空隙 2→1px、尺寸上限 14→16px，宽度公式同步" },
-    { "packageId": "pkg-20", "note": "v12（run-20）：悬停提示日期由「8月15日」改为「2026年8月15日」（年月日）" },
-    { "packageId": "pkg-21", "note": "v13（run-21）：底部月份标签去掉年份恢复「8月」；新增「每周用量」53 列×7 格柱状条（自下而上填充、最大周全满、其余按比例整数格、统一颜色），与热力图同构对齐" },
-    { "packageId": "pkg-22", "note": "v14（run-22）：每周用量改为视图切换——热力图右上方「每日/每周」按钮；每周格子悬停显示周范围+周总用量气泡" },
-    { "packageId": "pkg-23", "note": "v15（run-23，host v4 + client v15）：Host 新增 request/header 模型归属（provider/model）+ 洞察聚合（总轮数/时长/输入输出缓存）+ models[] 排名；Client 热力图下方新增平行两栏「洞察」+「最喜欢的模型」（Top5 + 比例条）" },
-    { "packageId": "pkg-24", "note": "v16（run-24）：删除热力图下方「少 □□□□□ 多」颜色图例（含 CSS）" },
-    { "packageId": "pkg-25", "note": "v17（run-25）：删除右上角「重新扫描」按钮（实时折叠 + 30s 刷新已足够；Host rescan RPC 保留备用）" },
-    { "packageId": "pkg-26", "note": "v18（run-26）：用户可见名称「Token 用量」统一改为「统计」（设置页入口/页面标题/Run 卡片）" },
-    { "packageId": "pkg-27", "note": "v19（run-27，i18n）：全部文案进 DICT（zh/en 双语），跟随 DSH locale（active==='zh' 中文，其他英文）；数值 亿·万/B·M·k、时长、日期、月份标签双语格式；locale.subscribe 切换即重渲染" },
-    { "packageId": "pkg-28", "note": "v20（run-28，修复英文残留）：① 连续天数卡片单位走 valDays i18n；② 设置面板 label 改为调用时直接读 locale 快照（shell useSyncExternalStore 同步重渲染早于 subscribe 回调导致英文下仍显示「统计」）；③ RunCard 冒号按语言（zh「：」/en「: 」）" },
-    { "packageId": "pkg-29", "note": "v21（run-29，host v5 + client v21）：修复升级/重启后累计数跳变——host 回补并行化（Promise.all）；client 扫描期不显示部分数字（占位页 + 2s 轮询）" },
-    { "packageId": "pkg-32", "note": "v22（run-32，临时 host-only 验证版）：liveFloor + force 头部补折修复水位线竞争；线上验证累计 83.6M→243.4M，峰值日与磁盘基准逐位相等" },
-    { "packageId": "pkg-33", "note": "v23（run-33，host v6 + client v21 正式版）：活跃会话历史丢失根因修复（实时流先推高 lastSeq → 回放被整段跳过；liveFloor 界定实时流覆盖区间，回放 force 补折头部），UI 恢复；调试路由移除" }
+    {
+      "packageId": "pkg-9",
+      "note": "首版部署（plan §6 原码 + console.warn 修正）"
+    },
+    {
+      "packageId": "pkg-10",
+      "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用"
+    },
+    {
+      "packageId": "pkg-11",
+      "note": "修复样式丢失：styles 是 Builtin 非 ctx Service，改为直接 styles.insert(CSS)"
+    },
+    {
+      "packageId": "pkg-12",
+      "note": "v4（run-12）：热力图悬停提示、移除每周/累计 tab 改按日历年分页、统计卡数值 FitValue 自适应单行、各卡标签同高"
+    },
+    {
+      "packageId": "pkg-13",
+      "note": "v5（run-13）：热力图改 53 列滚动视图（今天恒在最右下角），移除 1月1日 起点与按年分页"
+    },
+    {
+      "packageId": "pkg-14",
+      "note": "v6（run-14）：月份标签锚定含当月1日的列（GitHub 同款）+ 月份行与格子同宽 + 格子尺寸随容器自适应（--tks-size 4~12px）消除横向滚动条"
+    },
+    {
+      "packageId": "pkg-15",
+      "note": "v7（run-15）：观感微调——标题与热力图间距 44→30px（提示框缩小、顶部留白 32→22px），格子空隙 3px→2px（网格/月份行/图例），宽度公式同步"
+    },
+    {
+      "packageId": "pkg-16",
+      "note": "v8（run-16）：格子空隙 2→1px；热力图整体水平居中（align-items:safe center），窄容器填满与统计卡左右对齐、超 12px 上限的余量居中"
+    },
+    {
+      "packageId": "pkg-17",
+      "note": "v9（run-17）：格子 gap 归零、尺寸上限 12→14px 精确填充；容器 overflow-x:hidden + 月份行 overflow:hidden 根治滚动条闪现；自适应机制保留"
+    },
+    {
+      "packageId": "pkg-18",
+      "note": "v10（run-18）：空隙换回 2px（网格/月份行；图例不变），宽度公式、提示框贴边同步；滚动条根治与自适应机制不变"
+    },
+    {
+      "packageId": "pkg-19",
+      "note": "v11（run-19）：月份标签带年份「2026年8月」；格子空隙 2→1px、尺寸上限 14→16px，宽度公式同步"
+    },
+    {
+      "packageId": "pkg-20",
+      "note": "v12（run-20）：悬停提示日期由「8月15日」改为「2026年8月15日」（年月日）"
+    },
+    {
+      "packageId": "pkg-21",
+      "note": "v13（run-21）：底部月份标签去掉年份恢复「8月」；新增「每周用量」53 列×7 格柱状条（自下而上填充、最大周全满、其余按比例整数格、统一颜色），与热力图同构对齐"
+    },
+    {
+      "packageId": "pkg-22",
+      "note": "v14（run-22）：每周用量改为视图切换——热力图右上方「每日/每周」按钮；每周格子悬停显示周范围+周总用量气泡"
+    },
+    {
+      "packageId": "pkg-23",
+      "note": "v15（run-23，host v4 + client v15）：Host 新增 request/header 模型归属（provider/model）+ 洞察聚合（总轮数/时长/输入输出缓存）+ models[] 排名；Client 热力图下方新增平行两栏「洞察」+「最喜欢的模型」（Top5 + 比例条）"
+    },
+    {
+      "packageId": "pkg-24",
+      "note": "v16（run-24）：删除热力图下方「少 □□□□□ 多」颜色图例（含 CSS）"
+    },
+    {
+      "packageId": "pkg-25",
+      "note": "v17（run-25）：删除右上角「重新扫描」按钮（实时折叠 + 30s 刷新已足够；Host rescan RPC 保留备用）"
+    },
+    {
+      "packageId": "pkg-26",
+      "note": "v18（run-26）：用户可见名称「Token 用量」统一改为「统计」（设置页入口/页面标题/Run 卡片）"
+    },
+    {
+      "packageId": "pkg-27",
+      "note": "v19（run-27，i18n）：全部文案进 DICT（zh/en 双语），跟随 DSH locale（active==='zh' 中文，其他英文）；数值 亿·万/B·M·k、时长、日期、月份标签双语格式；locale.subscribe 切换即重渲染"
+    },
+    {
+      "packageId": "pkg-28",
+      "note": "v20（run-28，修复英文残留）：① 连续天数卡片单位走 valDays i18n；② 设置面板 label 改为调用时直接读 locale 快照（shell useSyncExternalStore 同步重渲染早于 subscribe 回调导致英文下仍显示「统计」）；③ RunCard 冒号按语言（zh「：」/en「: 」）"
+    },
+    {
+      "packageId": "pkg-29",
+      "note": "v21（run-29，host v5 + client v21）：修复升级/重启后累计数跳变——host 回补并行化（Promise.all）；client 扫描期不显示部分数字（占位页 + 2s 轮询）"
+    },
+    {
+      "packageId": "pkg-32",
+      "note": "v22（run-32，临时 host-only 验证版）：liveFloor + force 头部补折修复水位线竞争；线上验证累计 83.6M→243.4M，峰值日与磁盘基准逐位相等"
+    },
+    {
+      "packageId": "pkg-33",
+      "note": "v23（run-33，host v6 + client v21 正式版）：活跃会话历史丢失根因修复（实时流先推高 lastSeq → 回放被整段跳过；liveFloor 界定实时流覆盖区间，回放 force 补折头部），UI 恢复；调试路由移除"
+    },
+    {
+      "packageId": "pkg-34",
+      "note": "v24（run-34，仅 client.js）：色阶改对数+线性混合 6 档（新增 lv5 深砖红 #a83a12），修复单一大峰值日把所有活跃日压进同档导致的「热力图颜色无区分」（1.95亿→lv5、4,856万→lv4）"
+    }
   ],
   "files": {
     "host": "host.js",
