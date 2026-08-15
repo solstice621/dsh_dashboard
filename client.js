@@ -6,12 +6,11 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v6（部署中；v5 = pkg-13）
-// v6 变更：
-//   1. 月份标签改为锚定「包含该月 1 日」的那一列（GitHub 同款）；网格起点落在月中间时该月不标记
-//   2. 月份行列距与格子严格同宽（span 宽 = --tks-size，pitch = 格子宽 + 3px gap）
-//   3. 格子尺寸按容器宽度自适应（--tks-size，4~12px），53 列不再溢出、无横向滚动条
-//   4. 列仍为「列尾 = 今天星期」的滚动 7 天，今天恒在最右下角（v5 保留）
+// 版本：v7（部署中；v6 = pkg-14）
+// v7 变更（纯观感微调，仅 client.js）：
+//   1. 「Token 活动」与热力图之间空隙：标题边距 12→8px、容器顶部留白 32→22px
+//      （提示框同步缩小：10px 字号、bottom:13px、padding 2px 6px，保证首行提示不被裁剪）
+//   2. 格子空隙 3px→2px（网格横向/纵向、月份行、图例），宽度自适应公式同步
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -156,7 +155,7 @@ function Heatmap(props) {
     const fit = () => {
       const avail = el.clientWidth
       const size = Math.max(4, Math.min(12,
-        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 3) / GRID_COLUMNS)))
+        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 2) / GRID_COLUMNS)))
       el.style.setProperty('--tks-size', size + 'px')
     }
     fit()
@@ -267,12 +266,12 @@ const CSS = [
   '.tks-card-value{width:100%;height:30px;line-height:30px;font-size:22px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
   '.tks-card-label{font-size:12px;opacity:.6;margin-top:6px}',
   '.tks-card-sub{font-size:11px;opacity:.45;margin-top:4px}',
-  '.tks-activity-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}',
+  '.tks-activity-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}',
   '.tks-activity-title{font-size:15px;font-weight:600}',
-  // 顶部留白给首行方块的悬停提示（容器 overflow-x:auto 会同时裁剪纵向溢出）
-  '.tks-heatmap-wrap{overflow-x:auto;padding:32px 2px 8px}',
-  '.tks-heatmap{display:flex;gap:3px}',
-  '.tks-col{display:flex;flex-direction:column;gap:3px}',
+  // 顶部留白 22px 给首行方块的悬停提示（提示框已缩小；容器 overflow-x:auto 会同时裁剪纵向溢出）
+  '.tks-heatmap-wrap{overflow-x:auto;padding:22px 2px 8px}',
+  '.tks-heatmap{display:flex;gap:2px}',
+  '.tks-col{display:flex;flex-direction:column;gap:2px}',
   // 格子尺寸由 Heatmap 按容器宽度计算（--tks-size），默认 10px
   '.tks-cell{width:var(--tks-size,10px);height:var(--tks-size,10px);border-radius:2px;display:inline-block;position:relative}',
   '.tks-lv0{background:rgba(128,128,128,.14)}',
@@ -281,14 +280,14 @@ const CSS = [
   '.tks-lv3{background:#e5764c}',
   '.tks-lv4{background:#c74e24}',
   // 自定义悬停提示：纯 CSS 跟随 :hover，不依赖 window/document
-  '.tks-tip{display:none;position:absolute;bottom:15px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(32,32,32,.94);color:#fafafa;font-size:11px;line-height:1.5;padding:3px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}',
+  '.tks-tip{display:none;position:absolute;bottom:13px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(32,32,32,.94);color:#fafafa;font-size:10px;line-height:1.45;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}',
   '.tks-cell:hover .tks-tip{display:block}',
-  '.tks-tip-left .tks-tip{left:-3px;transform:none}',
-  '.tks-tip-right .tks-tip{left:auto;right:-3px;transform:none}',
-  '.tks-months{display:flex;gap:3px;margin-top:6px;font-size:10px;opacity:.55}',
-  // span 宽 = 格子宽，pitch = 格子宽 + 3px gap，与热力网格严格同宽对齐
+  '.tks-tip-left .tks-tip{left:-2px;transform:none}',
+  '.tks-tip-right .tks-tip{left:auto;right:-2px;transform:none}',
+  '.tks-months{display:flex;gap:2px;margin-top:6px;font-size:10px;opacity:.55}',
+  // span 宽 = 格子宽，pitch = 格子宽 + 2px gap，与热力网格严格同宽对齐
   '.tks-months span{width:var(--tks-size,10px);overflow:visible;white-space:nowrap}',
-  '.tks-legend{display:flex;align-items:center;gap:3px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
+  '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',
 ].join('\n')
 

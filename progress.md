@@ -210,3 +210,28 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - 两种「今天」下均 53 列、最后一列底格 = 今天 ✅
 - 12 个月份标签，逐列校验「含该月 1 日」零错位；首标签 9月（网格始于 2025-08-10，8月 不标）✅
 - `node --check` 语法通过 ✅
+
+---
+
+## 八、v7 迭代（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-15` / `run-15`（cordis_define kind=existing + update 激活）；`plugin.json` 已回填。
+
+### 用户反馈（针对 v6）
+
+1. 「Token 活动」标题与热力图之间空隙过大（12px 标题边距 + 32px 顶部留白 ≈ 44px）；
+2. 热力图格子之间空隙过大，希望缩小。
+
+### 改动（仅 `client.js`，纯观感）
+
+| 项 | 改动 |
+| --- | --- |
+| 标题→热力图间距 | `.tks-activity-head` margin-bottom 12→8px；容器顶部留白 32→22px（合计 44→30px） |
+| 提示框配套缩小 | 10px 字号 / line-height 1.45 / padding 2px 6px / bottom 13px → 首行提示高度 ~18.5px，22px 留白足够不被裁剪 |
+| 格子空隙 | gap 3→2px（网格横向 `.tks-heatmap`、纵向 `.tks-col`、月份行 `.tks-months`、图例 `.tks-legend`），边缘贴边对齐 -3px→-2px |
+| 宽度公式 | `(GRID_COLUMNS-1)*3` → `*2` 同步 |
+
+### 验证（本机 node）
+
+- `node --check` 语法通过；
+- 宽度公式抽查：avail 520/560/600/640/700/800/900 → size 7/8/9/10/11/12/12px，总宽均 ≤ avail（不溢出）✅
