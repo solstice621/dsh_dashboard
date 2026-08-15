@@ -769,4 +769,4 @@ dsh 服务停止/重启后不要全量扫盘重建；删除会话记录后，已
 - 仓库：https://github.com/0xsline/awesome-deepseek-harness（contributing.md：README.md + README.zh-CN.md 双语同 PR）；
 - 分支 `add-dsh-dashboard`（81b718b，UI & Experience 分类、dsh-usage-panel 之后各 +1 行）已推送到
   solstice621 的 fork；
-- PR 链接（用户点击创建）：https://github.com/0xsline/awesome-deepseek-harness/compare/main...solstice621:add-dsh-dashboard?expand=1
+- ✅ **PR 已创建（全自动，OAuth Device Flow）**：https://github.com/0xsline/awesome-deepseek-harness/pull/225（#225，open）

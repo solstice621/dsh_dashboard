@@ -93,8 +93,7 @@ handy for iterating without restarting the profile):
 
 - ✅ Listed in [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace): scanner-verified
   (`verified`, one-click install pinned to `github:solstice621/dsh_dashboard#<commit>`, auto-refreshed every 2h);
-- 🚀 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) listing PR submitted:
-  `docs: add dsh-dashboard` (UI & Experience, bilingual entry).
+- 🚀 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) listing PR: [#225 `docs: add dsh-dashboard`](https://github.com/0xsline/awesome-deepseek-harness/pull/225) (UI & Experience, bilingual entry).
 
 ## 📄 License
 
