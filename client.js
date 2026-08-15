@@ -6,10 +6,10 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v10（部署中；v9 = pkg-17）
-// v10 变更（仅 client.js，观感微调）：
-//   1. 格子空隙换回 2px（网格横向/纵向、月份行；图例不变），宽度公式、提示框贴边同步
-//   2. 滚动条根治（容器/月份行 overflow:hidden）与自适应机制保持不变
+// 版本：v11（部署中；v10 = pkg-18）
+// v11 变更（仅 client.js，观感微调）：
+//   1. 月份标签带上年份：「2026年8月」（跨年视图一目了然）
+//   2. 格子空隙 2px→1px（网格横向/纵向、月份行），尺寸上限 14→16px，宽度公式同步
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -95,7 +95,7 @@ function buildGrid(days, colCount) {
     for (let m = mFirst; m <= mLast; m += 1) {
       if (m > lastLabelMonth) {
         lastLabelMonth = m
-        if (label === '') label = ((m % 12) + 1) + '月'
+        if (label === '') label = Math.floor(m / 12) + '年' + ((m % 12) + 1) + '月'
       }
     }
     monthLabels.push(label)
@@ -154,8 +154,8 @@ function Heatmap(props) {
     if (!el) return undefined
     const fit = () => {
       const avail = el.clientWidth
-      const size = Math.max(4, Math.min(14,
-        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 2) / GRID_COLUMNS)))
+      const size = Math.max(4, Math.min(16,
+        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 1) / GRID_COLUMNS)))
       el.style.setProperty('--tks-size', size + 'px')
     }
     fit()
@@ -274,8 +274,8 @@ const CSS = [
   //   特定宽度下滚动条闪现；hidden 从根上消除
   // align-items:safe center：内容窄于容器时整体居中
   '.tks-heatmap-wrap{overflow-x:hidden;padding:22px 2px 8px;display:flex;flex-direction:column;align-items:safe center}',
-  '.tks-heatmap{display:flex;gap:2px}',
-  '.tks-col{display:flex;flex-direction:column;gap:2px}',
+  '.tks-heatmap{display:flex;gap:1px}',
+  '.tks-col{display:flex;flex-direction:column;gap:1px}',
   // 格子尺寸由 Heatmap 按容器宽度计算（--tks-size），默认 12px
   '.tks-cell{width:var(--tks-size,12px);height:var(--tks-size,12px);border-radius:2px;display:inline-block;position:relative}',
   '.tks-lv0{background:rgba(128,128,128,.14)}',
@@ -286,11 +286,11 @@ const CSS = [
   // 自定义悬停提示：纯 CSS 跟随 :hover，不依赖 window/document
   '.tks-tip{display:none;position:absolute;bottom:13px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(32,32,32,.94);color:#fafafa;font-size:10px;line-height:1.45;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}',
   '.tks-cell:hover .tks-tip{display:block}',
-  '.tks-tip-left .tks-tip{left:-2px;transform:none}',
-  '.tks-tip-right .tks-tip{left:auto;right:-2px;transform:none}',
-  // overflow:hidden：nowrap 标签文字（如「10月」）宽过列距，防止其撑大 scrollable overflow
-  '.tks-months{display:flex;gap:2px;margin-top:6px;font-size:10px;opacity:.55;overflow:hidden}',
-  // span 宽 = 格子宽，pitch = 格子宽 + 2px gap，与热力网格严格同宽对齐
+  '.tks-tip-left .tks-tip{left:-1px;transform:none}',
+  '.tks-tip-right .tks-tip{left:auto;right:-1px;transform:none}',
+  // overflow:hidden：nowrap 标签文字（如「2026年10月」）宽过列距，防止其撑大 scrollable overflow
+  '.tks-months{display:flex;gap:1px;margin-top:6px;font-size:10px;opacity:.55;overflow:hidden}',
+  // span 宽 = 格子宽，pitch = 格子宽 + 1px gap，与热力网格严格同宽对齐
   '.tks-months span{width:var(--tks-size,12px);overflow:visible;white-space:nowrap}',
   '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',

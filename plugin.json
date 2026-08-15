@@ -5,7 +5,7 @@
   "name": "Token 用量统计（Codex 风格）",
   "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
   "platforms": ["host", "client"],
-  "currentPackageId": "pkg-18",
+  "currentPackageId": "pkg-19",
   "packageHistory": [
     { "packageId": "pkg-9",  "note": "首版部署（plan §6 原码 + console.warn 修正）" },
     { "packageId": "pkg-10", "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用" },
@@ -16,7 +16,8 @@
     { "packageId": "pkg-15", "note": "v7（run-15）：观感微调——标题与热力图间距 44→30px（提示框缩小、顶部留白 32→22px），格子空隙 3px→2px（网格/月份行/图例），宽度公式同步" },
     { "packageId": "pkg-16", "note": "v8（run-16）：格子空隙 2→1px；热力图整体水平居中（align-items:safe center），窄容器填满与统计卡左右对齐、超 12px 上限的余量居中" },
     { "packageId": "pkg-17", "note": "v9（run-17）：格子 gap 归零、尺寸上限 12→14px 精确填充；容器 overflow-x:hidden + 月份行 overflow:hidden 根治滚动条闪现；自适应机制保留" },
-    { "packageId": "pkg-18", "note": "v10（run-18）：空隙换回 2px（网格/月份行；图例不变），宽度公式、提示框贴边同步；滚动条根治与自适应机制不变" }
+    { "packageId": "pkg-18", "note": "v10（run-18）：空隙换回 2px（网格/月份行；图例不变），宽度公式、提示框贴边同步；滚动条根治与自适应机制不变" },
+    { "packageId": "pkg-19", "note": "v11（run-19）：月份标签带年份「2026年8月」；格子空隙 2→1px、尺寸上限 14→16px，宽度公式同步" }
   ],
   "files": {
     "host": "host.js",
