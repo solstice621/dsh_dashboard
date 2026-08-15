@@ -1,4 +1,4 @@
-# dsh-token-stats — Token 用量统计（Codex 风格）
+# dsh-token-usage-dashboard — Token 用量统计（Codex 风格）
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-blue)](https://github.com/topics/dsh-plugin)
@@ -10,7 +10,7 @@
 Codex 个人主页风格的 Token 用量统计仪表盘：5 统计卡 + GitHub 风格热力图（每日/每周）+
 洞察 + 模型用量排名。**界面跟随 DSH 语言设置**：中文环境显示中文仪表盘，其他语言显示英文仪表盘。
 
-![dsh-token-stats 仪表盘截图](assets/dsh_dashboard.png)
+![dsh-token-usage-dashboard 仪表盘截图](assets/dsh-token-usage-dashboard.png)
 
 ## ✨ 功能
 
@@ -20,18 +20,18 @@ Codex 个人主页风格的 Token 用量统计仪表盘：5 统计卡 + GitHub �
 - **洞察**：聊天总数、LLM 请求数、会话总数、活跃天数、缓存命中率、平均每轮 Token/时长
 - **最喜欢的模型**：供应商-模型（provider/model）Token 用量排名 Top5 + 比例条
 - **数据源**：全部会话日志（`assistant/message` 的 `data.usage` + `request/header` 的模型归属 +
-  `turn/start`/`turn/end` 时长），实时增量更新，无需独立持久化
+  `turn/start`/`turn/end` 时长），实时增量更新；快照持久化 + 增量同步，重启后快速恢复
 - **i18n**：跟随 DSH 语言（`locale.getLocale().active`），zh → 中文 / 其他 → 英文，切换即时生效
 
 ## 🚀 安装（bundle 方式，推荐）
 
 ```sh
-dsh plugin --profile web add github:solstice621/dsh_dashboard
+dsh plugin --profile web add github:solstice621/dsh-token-usage-dashboard
 dsh --profile web   # 重启后生效
 ```
 
 安装后打开 **设置 → 统计** 即可看到完整仪表盘。也可本地路径安装：
-`dsh plugin --profile web add file:/path/to/dsh-dashboard`。
+`dsh plugin --profile web add file:/path/to/dsh-token-usage-dashboard`。
 
 > 首次打开时后台扫描全部历史会话（秒级~几十秒），之后通过 `session/event` 实时增量，
 > 仪表盘每 30s 自动刷新，无需手动操作。
@@ -59,7 +59,7 @@ dsh --profile web   # 重启后生效
 | `host.js` / `client.js` | 动态插件版 Host/Client 函数体（`cordis_define` 直接用） |
 | `plugin.json` | 插件元信息与版本历史（pkg-9 … pkg-27） |
 | `plan.md` / `progress.md` | 策划文档与进度档案（含全部故障/修复记录） |
-| `assets/dsh_dashboard.png` | 仪表盘截图 |
+| `assets/dsh-token-usage-dashboard.png` | 仪表盘截图 |
 
 ## ✅ 验收清单
 
@@ -92,9 +92,9 @@ dsh --profile web   # 重启后生效
 ## 🌐 生态
 
 - ✅ [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace) 已自动收录：
-  扫描验证 `verified`、一键安装（`github:solstice621/dsh_dashboard#<commit>`）、每 2 小时自动更新锁定 commit；
+  扫描验证 `verified`、一键安装（`github:solstice621/dsh-token-usage-dashboard#<commit>`）、每 2 小时自动更新锁定 commit；
 - 🚀 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) 收录 PR 已提交：
-  [#225 `docs: add dsh-dashboard`](https://github.com/0xsline/awesome-deepseek-harness/pull/225)（UI & Experience 分类，中英双语条目）。
+  [#225 `docs: add dsh-token-usage-dashboard`](https://github.com/0xsline/awesome-deepseek-harness/pull/225)（UI & Experience 分类，中英双语条目）。
 
 ## 📄 License
 

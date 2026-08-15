@@ -1,4 +1,4 @@
-# dsh-token-stats — Codex-style token usage dashboard
+# dsh-token-usage-dashboard — Codex-style token usage dashboard
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-blue)](https://github.com/topics/dsh-plugin)
@@ -10,7 +10,7 @@ A Codex-style token usage dashboard for [DeepSeek Harness](https://github.com/de
 5 stat cards + a GitHub-style activity heatmap (daily / weekly) + insights + per-model usage ranking.
 The UI follows the DSH language setting: Chinese interface → Chinese dashboard, anything else → English.
 
-![dsh-token-stats dashboard](assets/dsh_dashboard.png)
+![dsh-token-usage-dashboard screenshot](assets/dsh-token-usage-dashboard.png)
 
 ## ✨ Features
 
@@ -19,17 +19,17 @@ The UI follows the DSH language setting: Chinese interface → Chinese dashboard
   **Daily / Weekly** view toggle (weekly = bottom-up 7-cell bars, hover for the week total)
 - **Insights**: total turns, LLM requests, sessions, active days, cache hit rate, avg tokens & duration per turn
 - **Favorite models**: provider/model token ranking (Top 5) with ratio bars
-- **Data source**: session logs (`assistant/message` usage + `request/header` model attribution + `turn/start`/`turn/end` durations), live incremental updates, no extra persistence
+- **Data source**: session logs (`assistant/message` usage + `request/header` model attribution + `turn/start`/`turn/end` durations), live incremental updates, persisted snapshot + incremental sync for fast restarts
 
 ## 🚀 Install (bundle)
 
 ```sh
-dsh plugin --profile web add github:solstice621/dsh_dashboard
+dsh plugin --profile web add github:solstice621/dsh-token-usage-dashboard
 dsh --profile web   # restart to apply
 ```
 
 Then open **Settings → Stats** for the full dashboard. Local install:
-`dsh plugin --profile web add file:/path/to/dsh-dashboard`.
+`dsh plugin --profile web add file:/path/to/dsh-token-usage-dashboard`.
 
 > On first open the plugin scans all historical sessions (seconds to a minute), then updates
 > in real time via `session/event`; the dashboard auto-refreshes every 30s — no manual action needed.
@@ -58,7 +58,7 @@ handy for iterating without restarting the profile):
 | `host.js` / `client.js` | Dynamic-plugin host/client function bodies (paste into `cordis_define`) |
 | `plugin.json` | Plugin metadata & package history (pkg-9 … pkg-27) |
 | `plan.md` / `progress.md` | Design docs & progress log (incl. every bug/fix) |
-| `assets/dsh_dashboard.png` | Dashboard screenshot |
+| `assets/dsh-token-usage-dashboard.png` | Dashboard screenshot |
 
 ## ✅ Acceptance checklist
 
@@ -92,8 +92,8 @@ handy for iterating without restarting the profile):
 ## 🌐 Ecosystem
 
 - ✅ Listed in [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace): scanner-verified
-  (`verified`, one-click install pinned to `github:solstice621/dsh_dashboard#<commit>`, auto-refreshed every 2h);
-- 🚀 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) listing PR: [#225 `docs: add dsh-dashboard`](https://github.com/0xsline/awesome-deepseek-harness/pull/225) (UI & Experience, bilingual entry).
+  (`verified`, one-click install pinned to `github:solstice621/dsh-token-usage-dashboard#<commit>`, auto-refreshed every 2h);
+- 🚀 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) listing PR: [#225 `docs: add dsh-token-usage-dashboard`](https://github.com/0xsline/awesome-deepseek-harness/pull/225) (UI & Experience, bilingual entry).
 
 ## 📄 License
 

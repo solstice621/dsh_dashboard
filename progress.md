@@ -2,7 +2,7 @@
 
 > 记录时间：2026-08-15 21:25 CST（首次）；2026-08-15 深夜（部署完成更新）；2026-08-15（v4 源码迭代，见第五节）
 > 关联文档：`~/token-stats-plugin-plan.md`（完整策划 + 可部署代码）
-> 状态：**已部署并运行中** ✅（见下方「部署记录」）；源码已归档至 git 仓库 `~/dsh-dashboard`（main @ 64a88fc，远程 `git@github.com:solstice621/dsh_dashboard.git`）
+> 状态：**已部署并运行中** ✅（见下方「部署记录」）；源码已归档至 git 仓库 `~/dsh-token-usage-dashboard`（main @ 64a88fc，远程 `git@github.com:solstice621/dsh-token-usage-dashboard.git`）
 
 ---
 
@@ -498,12 +498,12 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 
 > 目标：加入 GitHub dsh 生态（第②步：打包成可安装插件）。
 
-### 产物（仓库根目录即 npm 包 `dsh-token-stats`）
+### 产物（仓库根目录即 npm 包 `dsh-token-usage-dashboard`）
 
 | 文件 | 说明 |
 | --- | --- |
 | `package.json` | `type: module`；`main: lib/index.js`；exports `.`/`./client`；`dsh.bundle.patch` → `cordis.patch.yml`；`dsh.client { inject: [client-runtime, ui-slots, ui-settings-general], platform: web }`（参考 Make0209/dsh-usage-stats 官方社区格式） |
-| `cordis.patch.yml` | `- insert: - { id: token-stats, name: dsh-token-stats }` |
+| `cordis.patch.yml` | `- insert: - { id: token-stats, name: dsh-token-usage-dashboard }` |
 | `lib/index.js` | Host：与动态版 host.js 同源折叠逻辑；数据出口改为 `webServer.register({kind:'exact', path, handler})`（`GET /api/token-stats`、`POST /api/token-stats/rescan`），不依赖 harness RPC |
 | `lib/client.js` | Client：`window.__ModuleLoader__.load({id, factory})` 工厂；`exports.inject=['timer']`、`apply(ctx)` 注册「设置 → 统计」；数据用 `fetch('/api/token-stats')`；样式经 `<style>` 注入并随 dispose 移除；去掉动态版专属的 tool.view.cordis RunCard |
 
@@ -514,7 +514,7 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
    totalTokens=152,048,419 / turns=75 / 4 个模型（Top：deepseek-official/deepseek-v4-flash）✅；
 3. **client 工厂冒烟**：stub window/document 执行 factory → `exports.inject=['timer']`、`apply` 为函数 ✅；
 4. **真实安装**：`corepack enable pnpm`（pnpm 11.21.0）→ `dsh plugin --profile headless add file:...` 成功，
-   `dsh.profile.bundles` 出现 `dsh-token-stats`，`--dump-config` 合成配置正确插入插件行；测试后已 remove 还原 ✅。
+   `dsh.profile.bundles` 出现 `dsh-token-usage-dashboard`，`--dump-config` 合成配置正确插入插件行；测试后已 remove 还原 ✅。
 
 ### 下一步（用户可选项）
 
@@ -756,8 +756,8 @@ dsh 服务停止/重启后不要全量扫盘重建；删除会话记录后，已
 - 市场仓库：https://github.com/YELEBAI/dsh-plugin-marketplace ——「只有扫描器验证并写入中心 Registry 的插件才进入市场」；
 - 扫描器每 2 小时扫 `topic:dsh-plugin`，自动验证 manifest / bundle patch / 入口 / README；
 - **已确认收录**（上一轮 16:42:59 扫描）：`registry/state.json` 中
-  `solstice621/dsh_dashboard` = `verified`，`registry/plugins.json` 已有条目：
-  - 一键安装：`github:solstice621/dsh_dashboard#3553ffdb64cd3c11427b582a92f5ab6b3adc81a7`（锁定 commit，不会漂移）
+  `solstice621/dsh-token-usage-dashboard` = `verified`，`registry/plugins.json` 已有条目：
+  - 一键安装：`github:solstice621/dsh-token-usage-dashboard#3553ffdb64cd3c11427b582a92f5ab6b3adc81a7`（锁定 commit，不会漂移）
   - profiles: web；requiresBuildApproval: false（无生命周期脚本）；hasClient: true；
   - inspection：host=lib/index.js、client=lib/client.js 均找到，runtimeArtifactsCommitted ✅
 - **v26（8289186）下轮扫描自动更新锁定 commit**：自查大小全部低于上限
@@ -767,7 +767,7 @@ dsh 服务停止/重启后不要全量扫盘重建；删除会话记录后，已
 ### awesome-deepseek-harness（手策列表，PR 流程）
 
 - 仓库：https://github.com/0xsline/awesome-deepseek-harness（contributing.md：README.md + README.zh-CN.md 双语同 PR）；
-- 分支 `add-dsh-dashboard`（81b718b，UI & Experience 分类、dsh-usage-panel 之后各 +1 行）已推送到
+- 分支 `add-dsh-token-usage-dashboard`（81b718b，UI & Experience 分类、dsh-usage-panel 之后各 +1 行）已推送到
   solstice621 的 fork；
 - ✅ **PR 已创建（全自动，OAuth Device Flow）**：https://github.com/0xsline/awesome-deepseek-harness/pull/225（#225，open）
 
@@ -781,13 +781,13 @@ dsh 服务停止/重启后不要全量扫盘重建；删除会话记录后，已
 ### 操作
 
 ```sh
-dsh plugin --profile web add github:solstice621/dsh_dashboard
+dsh plugin --profile web add github:solstice621/dsh-token-usage-dashboard
 ```
 
 ### 验证
 
-- `~/.dsh/profiles/web/package.json`：`dependencies: dsh-token-stats: github:solstice621/dsh_dashboard`，
-  `dsh.profile.bundles` 含 `dsh-token-stats`；
+- `~/.dsh/profiles/web/package.json`：`dependencies: dsh-token-usage-dashboard: github:solstice621/dsh-token-usage-dashboard`，
+  `dsh.profile.bundles` 含 `dsh-token-usage-dashboard`；
 - `pnpm-lock.yaml` 锁定 commit `b15d81b`（v26 最新，含快照 + 增量同步）；
 - 动态版兜底：本会话重新部署为 toksta-1/pkg-1（run-1）后已恢复「统计」入口（快照加载 276M+）。
 
@@ -805,19 +805,19 @@ dsh plugin --profile web add github:solstice621/dsh_dashboard
 
 ### 排查链（全部实证）
 
-1. client bundle 注入成功（页面 HTML 有 dsh-token-stats/client.js）但 host 路由 404；
+1. client bundle 注入成功（页面 HTML 有 dsh-token-usage-dashboard/client.js）但 host 路由 404；
 2. `--dump-config` 合成配置含 token-stats 行；loadProfile 显示 bundle patch 正确
-   （`[{"insert":[{"id":"token-stats","name":"dsh-token-stats"}]}]`）；
+   （`[{"insert":[{"id":"token-stats","name":"dsh-token-usage-dashboard"}]}]`）；
 3. loader 树枚举：`include:token-stats` entry 存在且 fiber up；
-4. **探针**（node_modules 直改 + 重启）：`[dsh-token-stats] apply begin, webServer=NO`——
+4. **探针**（node_modules 直改 + 重启）：`[dsh-token-usage-dashboard] apply begin, webServer=NO`——
    apply 执行了，但启动瞬间 `ctx.get('webServer')` 为 **undefined**；
 5. 枚举对比：启动完成后同一 entry 的 fiber ctx 里 webServer=YES；
-6. 手动 `loader.create({name:'dsh-token-stats'})`（启动后）→ apply 时 webServer 已在 → 路由 200。
+6. 手动 `loader.create({name:'dsh-token-usage-dashboard'})`（启动后）→ apply 时 webServer 已在 → 路由 200。
 
 ### 根因
 
 **include 树并行激活的启动时序竞争**：dsh-host-webserver（include:webserver）与
-dsh-token-stats 并行 apply，我们的 apply 先跑完（webServer 尚未 provide）→
+dsh-token-usage-dashboard 并行 apply，我们的 apply 先跑完（webServer 尚未 provide）→
 `ctx.get('webServer')` undefined → `if (webServer !== undefined)` 静默跳过路由注册。
 官方插件通过 **`inject` 声明硬依赖**等待服务就绪；bundle 版之前 `inject = []`。
 

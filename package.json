@@ -1,5 +1,5 @@
 {
-  "name": "dsh-token-stats",
+  "name": "dsh-token-usage-dashboard",
   "version": "1.0.1",
   "description": "Codex 风格 Token 用量统计仪表盘：5 统计卡 + 每日/每周热力图 + 洞察 + 模型用量排名（DeepSeek Harness 插件）",
   "type": "module",

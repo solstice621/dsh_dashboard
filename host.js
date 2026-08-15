@@ -189,7 +189,7 @@ return {
         await fs.writeText(fsTarget, serialize())
       } catch (e) {
         dirty = true // 写失败留脏标记，下个周期重试
-        console.error('[token-stats] snapshot write failed:', String(e))
+        console.error('[dsh-token-usage-dashboard] snapshot write failed:', String(e))
       }
     }
 
@@ -222,11 +222,11 @@ return {
           longestTurnMs = snap.longestTurnMs || 0
           longestChatMs = snap.longestChatMs || 0
           longestChatSessionId = snap.longestChatSessionId || null
-          console.log('[token-stats] snapshot loaded: ' + snap.days.length + ' days, ' +
+          console.log('[dsh-token-usage-dashboard] snapshot loaded: ' + snap.days.length + ' days, ' +
             sessions.size + ' sessions, total ' + totalTokens)
           return true
         } catch (e) {
-          console.log('[token-stats] no usable snapshot, fall back to full scan: ' + String(e))
+          console.log('[dsh-token-usage-dashboard] no usable snapshot, fall back to full scan: ' + String(e))
           return false
         }
       })
@@ -256,7 +256,7 @@ return {
         }
         scannedSessions += 1
       } catch (e) {
-        console.error('[token-stats] incremental read failed:', id, String(e))
+        console.error('[dsh-token-usage-dashboard] incremental read failed:', id, String(e))
       }
     }
 
@@ -281,7 +281,7 @@ return {
         await Promise.all(jobs)
         // 快照里有、列表里没有的会话（已删除）：跳过 → 历史统计保留
       } catch (e) {
-        console.error('[token-stats] syncDelta failed:', String(e))
+        console.error('[dsh-token-usage-dashboard] syncDelta failed:', String(e))
       } finally {
         scanning = false
         ready = true
@@ -305,7 +305,7 @@ return {
         }
         scannedSessions += 1
       } catch (e) {
-        console.error('[token-stats] readSession failed:', id, e)
+        console.error('[dsh-token-usage-dashboard] readSession failed:', id, e)
       }
     }
 
@@ -325,7 +325,7 @@ return {
         }
         await Promise.all(jobs)
       } catch (e) {
-        console.error('[token-stats] listSessions failed:', e)
+        console.error('[dsh-token-usage-dashboard] listSessions failed:', e)
       } finally {
         scanning = false
         ready = true

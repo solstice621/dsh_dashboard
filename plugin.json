@@ -1,12 +1,12 @@
 {
   "pluginId": "toksta-5",
   "idPrefix": "toksta",
-  "repo": "~/dsh-dashboard",
+  "repo": "~/dsh-token-usage-dashboard",
   "name": "Token 用量统计（Codex 风格）",
   "bundle": {
-    "packageName": "dsh-token-stats",
+    "packageName": "dsh-token-usage-dashboard",
     "version": "1.0.1",
-    "install": "dsh plugin --profile web add github:solstice621/dsh_dashboard",
+    "install": "dsh plugin --profile web add github:solstice621/dsh-token-usage-dashboard",
     "note": "bundle 版（lib/index.js + lib/client.js + cordis.patch.yml）为可安装包；动态插件版（host.js/client.js）继续用于会话内部署"
   },
   "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
