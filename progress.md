@@ -770,3 +770,28 @@ dsh 服务停止/重启后不要全量扫盘重建；删除会话记录后，已
 - 分支 `add-dsh-dashboard`（81b718b，UI & Experience 分类、dsh-usage-panel 之后各 +1 行）已推送到
   solstice621 的 fork；
 - ✅ **PR 已创建（全自动，OAuth Device Flow）**：https://github.com/0xsline/awesome-deepseek-harness/pull/225（#225，open）
+
+---
+
+## 二十九、bundle 版正式安装到 web profile（2026-08-16）✅ 已安装
+
+> 背景：DSH 服务重启后动态插件（toksta-5）定义随进程丢失，桌面设置页入口消失；
+> 数据无损（快照 275M+）。决定安装 bundle 版实现常驻。
+
+### 操作
+
+```sh
+dsh plugin --profile web add github:solstice621/dsh_dashboard
+```
+
+### 验证
+
+- `~/.dsh/profiles/web/package.json`：`dependencies: dsh-token-stats: github:solstice621/dsh_dashboard`，
+  `dsh.profile.bundles` 含 `dsh-token-stats`；
+- `pnpm-lock.yaml` 锁定 commit `b15d81b`（v26 最新，含快照 + 增量同步）；
+- 动态版兜底：本会话重新部署为 toksta-1/pkg-1（run-1）后已恢复「统计」入口（快照加载 276M+）。
+
+### 待办
+
+- [ ] 用户重启 dsh 服务使 bundle 生效（重启后动态版 toksta-1 会再次消失，属预期——bundle 常驻接管；
+      两个版本共用同一快照文件，数据连续）
