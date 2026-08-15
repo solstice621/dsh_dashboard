@@ -14,7 +14,7 @@
     "host",
     "client"
   ],
-  "currentPackageId": "pkg-34",
+  "currentPackageId": "pkg-35",
   "packageHistory": [
     {
       "packageId": "pkg-9",
@@ -111,6 +111,10 @@
     {
       "packageId": "pkg-34",
       "note": "v24（run-34，仅 client.js）：色阶改对数+线性混合 6 档（新增 lv5 深砖红 #a83a12），修复单一大峰值日把所有活跃日压进同档导致的「热力图颜色无区分」（1.95亿→lv5、4,856万→lv4）"
+    },
+    {
+      "packageId": "pkg-35",
+      "note": "v25（run-35，仅 client.js）：按用户偏好，色阶由混合刻度改为纯线性 6 档（r = v/max，每档宽度 0.2），颜色深浅与消耗量完全按比例对应"
     }
   ],
   "files": {

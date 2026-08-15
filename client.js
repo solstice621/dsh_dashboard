@@ -7,11 +7,11 @@
 //     locale（可选：getLocale().active ∈ zh|en，跟随 DSH 语言切换中/英 UI）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v24（部署中；v23 = pkg-33）
-// v24 变更（仅 client.js，修复「热力图颜色无区分」）：
-//   色阶改为对数+线性混合 6 档（新增 lv5 深砖红 #a83a12）：单一大峰值日时对数刻度
-//   会把多数活跃日压进同一档（如 1.95亿 与 4,856万 都是 lv4）；混合线性分量后
-//   大值拉开梯度（1.95亿→lv5、4,856万→lv4、百万→lv3、十万以下→lv2、微量→lv1）
+// 版本：v25（部署中；v24 = pkg-34）
+// v25 变更（仅 client.js，色阶改为纯线性）：
+//   cellLevel 改为纯线性分档：r = v/max，均匀 6 档（0.2 步进）——
+//   颜色深浅与消耗量完全按比例对应（用户偏好线性而非对数/混合刻度）
+// v24 变更（修复「热力图颜色无区分」）：色阶为对数+线性混合 6 档（新增 lv5 深砖红 #a83a12）
 // （v21 起：扫描期不显示部分数字 + 2s/30s 自适应轮询；v19 起 i18n 双语；
 //  v20 修复英文残留；v22/v23 host v6 修复活跃会话丢失）
 
@@ -151,15 +151,13 @@ function fmtDuration(ms) {
 }
 function cellLevel(v, max) {
   if (!v || max <= 0) return 0
-  // 对数+线性混合 6 档：对数为主（偏斜数据）、线性为辅（大值拉开梯度），
-  // 避免单一大峰值日把多数活跃日压进同一档（修复「热力图颜色无区分」）
-  const lr = Math.log(v + 1) / Math.log(max + 1)
-  const rr = v / max
-  const r = 0.55 * lr + 0.45 * rr
-  if (r >= 0.85) return 5
+  // 纯线性 6 档：r = v/max 按比例均匀分档（每档宽度 0.2），
+  // 颜色深浅与消耗量完全线性对应
+  const r = v / max
+  if (r >= 0.8) return 5
   if (r >= 0.6) return 4
-  if (r >= 0.38) return 3
-  if (r >= 0.18) return 2
+  if (r >= 0.4) return 3
+  if (r >= 0.2) return 2
   return 1
 }
 // 日期头部：「2026年8月15日」/「Aug 15, 2026」
