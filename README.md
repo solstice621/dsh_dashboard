@@ -8,6 +8,8 @@
 Codex 个人主页风格的 Token 用量统计仪表盘：5 统计卡 + GitHub 风格热力图（每日/每周）+
 洞察 + 模型用量排名。
 
+![dsh-token-stats 仪表盘截图](assets/dsh_dashboard.png)
+
 ## ✨ 功能
 
 - **5 统计卡**：累计 Token 数 / 峰值 Token 数（单日）/ 最长聊天时长 / 当前连续天数 / 最长连续天数；数值字号自适应单行
@@ -51,6 +53,7 @@ dsh --profile web   # 重启后生效
 | `lib/client.js` | **bundle Client 半**：`window.__ModuleLoader__.load` 工厂，注册「设置 → 统计」 |
 | `cordis.patch.yml` | bundle patch：插入 `id: token-stats` 插件行 |
 | `package.json` | npm 包声明（`dsh.bundle` / `dsh.client` manifest） |
+| `assets/dsh_dashboard.png` | 仪表盘截图 |
 | `host.js` / `client.js` | 动态插件版 Host/Client 函数体（`cordis_define` 直接用） |
 | `plugin.json` | 插件元信息与版本历史（pkg-9 … pkg-26） |
 | `plan.md` / `progress.md` | 策划文档与进度档案（含全部故障/修复记录） |
