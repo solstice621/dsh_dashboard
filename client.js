@@ -6,11 +6,11 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v7（部署中；v6 = pkg-14）
-// v7 变更（纯观感微调，仅 client.js）：
-//   1. 「Token 活动」与热力图之间空隙：标题边距 12→8px、容器顶部留白 32→22px
-//      （提示框同步缩小：10px 字号、bottom:13px、padding 2px 6px，保证首行提示不被裁剪）
-//   2. 格子空隙 3px→2px（网格横向/纵向、月份行、图例），宽度自适应公式同步
+// 版本：v8（部署中；v7 = pkg-15）
+// v8 变更（纯观感微调，仅 client.js）：
+//   1. 格子空隙 2px→1px（网格横向/纵向、月份行、图例），宽度自适应公式同步
+//   2. 热力图整体水平居中（align-items:safe center）：容器够宽时格子按 12px 上限
+//      填满并与上方统计卡左右对齐；超出上限的余量左右居中
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -155,7 +155,7 @@ function Heatmap(props) {
     const fit = () => {
       const avail = el.clientWidth
       const size = Math.max(4, Math.min(12,
-        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 2) / GRID_COLUMNS)))
+        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 1) / GRID_COLUMNS)))
       el.style.setProperty('--tks-size', size + 'px')
     }
     fit()
@@ -269,9 +269,10 @@ const CSS = [
   '.tks-activity-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}',
   '.tks-activity-title{font-size:15px;font-weight:600}',
   // 顶部留白 22px 给首行方块的悬停提示（提示框已缩小；容器 overflow-x:auto 会同时裁剪纵向溢出）
-  '.tks-heatmap-wrap{overflow-x:auto;padding:22px 2px 8px}',
-  '.tks-heatmap{display:flex;gap:2px}',
-  '.tks-col{display:flex;flex-direction:column;gap:2px}',
+  // align-items:safe center：内容窄于容器时整体居中；极端窄时回退左对齐不丢内容
+  '.tks-heatmap-wrap{overflow-x:auto;padding:22px 2px 8px;display:flex;flex-direction:column;align-items:safe center}',
+  '.tks-heatmap{display:flex;gap:1px}',
+  '.tks-col{display:flex;flex-direction:column;gap:1px}',
   // 格子尺寸由 Heatmap 按容器宽度计算（--tks-size），默认 10px
   '.tks-cell{width:var(--tks-size,10px);height:var(--tks-size,10px);border-radius:2px;display:inline-block;position:relative}',
   '.tks-lv0{background:rgba(128,128,128,.14)}',
@@ -282,12 +283,12 @@ const CSS = [
   // 自定义悬停提示：纯 CSS 跟随 :hover，不依赖 window/document
   '.tks-tip{display:none;position:absolute;bottom:13px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(32,32,32,.94);color:#fafafa;font-size:10px;line-height:1.45;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}',
   '.tks-cell:hover .tks-tip{display:block}',
-  '.tks-tip-left .tks-tip{left:-2px;transform:none}',
-  '.tks-tip-right .tks-tip{left:auto;right:-2px;transform:none}',
-  '.tks-months{display:flex;gap:2px;margin-top:6px;font-size:10px;opacity:.55}',
-  // span 宽 = 格子宽，pitch = 格子宽 + 2px gap，与热力网格严格同宽对齐
+  '.tks-tip-left .tks-tip{left:-1px;transform:none}',
+  '.tks-tip-right .tks-tip{left:auto;right:-1px;transform:none}',
+  '.tks-months{display:flex;gap:1px;margin-top:6px;font-size:10px;opacity:.55}',
+  // span 宽 = 格子宽，pitch = 格子宽 + 1px gap，与热力网格严格同宽对齐
   '.tks-months span{width:var(--tks-size,10px);overflow:visible;white-space:nowrap}',
-  '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
+  '.tks-legend{display:flex;align-items:center;gap:1px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',
 ].join('\n')
 
