@@ -5,7 +5,7 @@
   "name": "Token 用量统计（Codex 风格）",
   "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
   "platforms": ["host", "client"],
-  "currentPackageId": "pkg-25",
+  "currentPackageId": "pkg-26",
   "packageHistory": [
     { "packageId": "pkg-9",  "note": "首版部署（plan §6 原码 + console.warn 修正）" },
     { "packageId": "pkg-10", "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用" },
@@ -23,7 +23,8 @@
     { "packageId": "pkg-22", "note": "v14（run-22）：每周用量改为视图切换——热力图右上方「每日/每周」按钮；每周格子悬停显示周范围+周总用量气泡" },
     { "packageId": "pkg-23", "note": "v15（run-23，host v4 + client v15）：Host 新增 request/header 模型归属（provider/model）+ 洞察聚合（总轮数/时长/输入输出缓存）+ models[] 排名；Client 热力图下方新增平行两栏「洞察」+「最喜欢的模型」（Top5 + 比例条）" },
     { "packageId": "pkg-24", "note": "v16（run-24）：删除热力图下方「少 □□□□□ 多」颜色图例（含 CSS）" },
-    { "packageId": "pkg-25", "note": "v17（run-25）：删除右上角「重新扫描」按钮（实时折叠 + 30s 刷新已足够；Host rescan RPC 保留备用）" }
+    { "packageId": "pkg-25", "note": "v17（run-25）：删除右上角「重新扫描」按钮（实时折叠 + 30s 刷新已足够；Host rescan RPC 保留备用）" },
+    { "packageId": "pkg-26", "note": "v18（run-26）：用户可见名称「Token 用量」统一改为「统计」（设置页入口/页面标题/Run 卡片）" }
   ],
   "files": {
     "host": "host.js",

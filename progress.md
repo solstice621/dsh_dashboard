@@ -475,3 +475,19 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
   「日志被外部工具改动/重放导致水位线漏折」的罕见场景有意义。
 - **改动**：删除右上角「重新扫描」按钮及 `.tks-btn` CSS（修复了删除时误删闭合括号的问题）；
   Host 的 `rescan` RPC **保留**备用（排查时仍可调用）。
+
+---
+
+## 十九、v18 迭代（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-26` / `run-26`（cordis_define kind=existing + update 激活）；`plugin.json` 已回填。
+
+### 用户反馈
+
+「Token 用量」改为「统计」。
+
+### 改动（仅 `client.js`）
+
+- 设置页入口 label：`'Token 用量'` → `'统计'`；
+- 页面标题：`'Token 用量'` → `'统计'`；
+- Run 卡片：`'Token 用量：'` → `'统计：'`，「设置 → Token 用量」→「设置 → 统计」。

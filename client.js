@@ -6,10 +6,9 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v17（部署中；v16 = pkg-24）
-// v17 变更（仅 client.js）：
-//   删除右上角「重新扫描」按钮（数据已由 session/event 实时折叠 + 30s 自动刷新保障，
-//   rescan 仅对日志被外部改动的罕见场景有意义；Host 的 rescan RPC 保留备用）
+// 版本：v18（部署中；v17 = pkg-25）
+// v18 变更（仅 client.js）：
+//   用户可见名称「Token 用量」统一改为「统计」（设置页入口 / 页面标题 / Run 卡片）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -242,7 +241,7 @@ function Dashboard(props) {
   return h('div', { className: 'tks-root' },
     h('div', { className: 'tks-header' },
       h('div', null,
-        h('div', { className: 'tks-title' }, 'Token 用量'),
+        h('div', { className: 'tks-title' }, '统计'),
         h('div', { className: 'tks-subtitle' },
           data.scanning
             ? '正在扫描历史会话（' + data.scannedSessions + '/' + data.totalSessions + '）…'
@@ -287,11 +286,11 @@ function RunCard() {
   }, [])
   if (!data) return h('div', null, 'Token 统计加载中…')
   return h('div', { className: 'tks-runcard' },
-    h('b', null, 'Token 用量：'),
+    h('b', null, '统计：'),
     '累计 ' + fmtTokens(data.totalTokens) +
     ' · 今日连续 ' + data.streakCurrent + ' 天' +
     ' · 峰值日 ' + (data.peakDay ? fmtTokens(data.peakDay.total) : '0'),
-    h('div', { className: 'tks-card-sub' }, '完整图表见「设置 → Token 用量」'))
+    h('div', { className: 'tks-card-sub' }, '完整图表见「设置 → 统计」'))
 }
 
 // 洞察：一组有趣的小数据
@@ -408,7 +407,7 @@ return {
     const slots = ctx.get('slots')
     if (slots === undefined) return
     slots.inject('settings.section', () => slots.register(
-      { name: 'settings.section', id: 'token-stats', order: 20, label: () => 'Token 用量' },
+      { name: 'settings.section', id: 'token-stats', order: 20, label: () => '统计' },
       (props) => h(Dashboard, props),
     ))
     slots.inject('tool.view.cordis', () => slots.register(
