@@ -6,13 +6,12 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v4（待部署；v3 对应运行中的 pkg-11）
-// v4 变更：
-//   1. 热力图方块悬停显示自定义提示：「x月x日消耗了 xx Token · N 次请求」
-//   2. 移除「每周 / 累计」两个 tab，只保留每日视图
-//   3. 热力图改为按日历年分页（一页一年）；前一年无记录时不显示「前一年」入口
-//   4. 统计卡数值自适应缩小字号，保证一行内显示（5938.2 万 / 2 小时 1 分不换行）
-//   5. 各统计卡的标签行（累计 Token 数等）统一高度对齐
+// 版本：v5（部署中；v4 = pkg-12）
+// v5 变更：
+//   1. 热力图改为「今天右下角锚定」的滚动视图：53 列 × 7 天，最后一列以今天结尾
+//      （今天 = 最右下角格），向左每列再推 7 天，最左约一年前；
+//      不再从 1 月 1 日开始、不再按年分页（移除 pager 与 year 状态）
+//   2. 其余（悬停提示 / 仅每日视图 / FitValue / 标签同高）不变
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -57,50 +56,39 @@ function tipText(cell) {
     ? head + '消耗了 ' + fmtTokens(cell.total) + ' Token · ' + cell.requests + ' 次请求'
     : head + '没有 Token 消耗'
 }
-// 组装某一日历年的网格（列=周，周日在上；本年截到今天，越界/未来格隐藏）
-function buildGrid(days, year) {
+// 网格列数：53 列 ≈ 一年（与参考截图一致），最后一列以今天结尾
+const GRID_COLUMNS = 53
+// 组装滚动网格：每列 = 连续 7 天（上→下 = 早→晚），最后一列 = [今天-6 .. 今天]，
+// 今天恒在最右下角；向左每列再往前推 7 天，最左列 ≈ 53 周前。
+function buildGrid(days, colCount) {
   const map = new Map()
   for (const d of days) map.set(d.date, d)
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  const thisYear = today.getFullYear()
-  const end = year === thisYear ? today : new Date(year, 11, 31)
-  const start = new Date(year, 0, 1)
-  start.setDate(start.getDate() - start.getDay()) // 对齐到本周周日
   const weeks = []
-  const cursor = new Date(start)
   let max = 0
-  while (cursor.getTime() <= end.getTime()) {
+  for (let k = 0; k < colCount; k += 1) {
+    // 该列最后一天：今天 - 7*(colCount-1-k) 天
+    const colEnd = new Date(today)
+    colEnd.setDate(colEnd.getDate() - 7 * (colCount - 1 - k))
     const week = []
-    for (let i = 0; i < 7; i += 1) {
-      const key = dayKeyOf(cursor.getTime())
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(colEnd)
+      d.setDate(d.getDate() - i)
+      const key = dayKeyOf(d.getTime())
       const day = map.get(key)
       const total = day ? day.total : 0
-      const inYear = cursor.getFullYear() === year
-      const future = cursor.getTime() > today.getTime()
-      week.push({
-        date: key,
-        total: total,
-        requests: day ? day.requests : 0,
-        hidden: !inYear || future,
-      })
-      if (inYear && !future && total > max) max = total
-      cursor.setDate(cursor.getDate() + 1)
+      if (total > max) max = total
+      week.push({ date: key, total: total, requests: day ? day.requests : 0 })
     }
     weeks.push(week)
   }
-  // 每月标签：取该列首个可见格，与前一列月份不同则标记
+  // 每月标签：该列首日（顶格）与前一列顶格月份不同则标记
   const monthLabels = []
   let prevMonth = -1
   for (const w of weeks) {
-    let label = ''
-    for (const c of w) {
-      if (!c.hidden) {
-        const m = parseInt(c.date.slice(5, 7), 10)
-        if (m !== prevMonth) { label = m + '月'; prevMonth = m }
-        break
-      }
-    }
-    monthLabels.push(label)
+    const m = parseInt(w[0].date.slice(5, 7), 10)
+    monthLabels.push(m !== prevMonth ? m + '月' : '')
+    prevMonth = m
   }
   return { weeks: weeks, monthLabels: monthLabels, max: max }
 }
@@ -146,7 +134,7 @@ function StatCard(props) {
 }
 
 function Heatmap(props) {
-  const g = buildGrid(props.days, props.year)
+  const g = buildGrid(props.days, GRID_COLUMNS)
   const colCount = g.weeks.length
   const columns = g.weeks.map((week, wi) =>
     h('div', { key: wi, className: 'tks-col' },
@@ -157,9 +145,8 @@ function Heatmap(props) {
         else if (wi >= colCount - 2) edge = ' tks-tip-right'
         return h('div', {
           key: ci,
-          className: 'tks-cell tks-lv' + (c.hidden ? 0 : cellLevel(c.total, g.max)) + edge,
-          style: c.hidden ? { visibility: 'hidden' } : undefined,
-        }, c.hidden ? null : h('span', { className: 'tks-tip' }, tipText(c)))
+          className: 'tks-cell tks-lv' + cellLevel(c.total, g.max) + edge,
+        }, h('span', { className: 'tks-tip' }, tipText(c)))
       })))
   return h('div', { className: 'tks-heatmap-wrap' },
     h('div', { className: 'tks-heatmap' }, columns),
@@ -178,8 +165,6 @@ function Dashboard(props) {
   const data = st[0]; const setData = st[1]
   const errSt = React.useState(null)
   const error = errSt[0]; const setError = errSt[1]
-  const yearSt = React.useState((new Date()).getFullYear())
-  const year = yearSt[0]; const setYear = yearSt[1]
   const load = function () {
     host.call('get-stats').then(setData, (e) => setError(String(e)))
   }
@@ -190,11 +175,6 @@ function Dashboard(props) {
   }, [])
   if (error) return h('div', { className: 'tks-root' }, '加载失败：', error)
   if (!data) return h('div', { className: 'tks-root' }, '加载中…')
-  // 分页：前一年有记录才可往前翻；最多翻到本年
-  const thisYear = (new Date()).getFullYear()
-  const earliest = data.days.length ? data.days[0].date : null
-  const hasPrev = earliest !== null && earliest < year + '-01-01'
-  const hasNext = year < thisYear
   return h('div', { className: 'tks-root' },
     h('div', { className: 'tks-header' },
       h('div', null,
@@ -223,16 +203,8 @@ function Dashboard(props) {
       h(StatCard, { value: data.streakLongest + ' 天', label: '最长连续天数' })),
     h('div', { className: 'tks-activity' },
       h('div', { className: 'tks-activity-head' },
-        h('span', { className: 'tks-activity-title' }, 'Token 活动'),
-        h('span', { className: 'tks-pager' },
-          hasPrev
-            ? h('button', { className: 'tks-page-btn', onClick: () => setYear(year - 1) }, '‹ 前一年')
-            : null,
-          h('span', { className: 'tks-page-year' }, year + ' 年'),
-          hasNext
-            ? h('button', { className: 'tks-page-btn', onClick: () => setYear(year + 1) }, '后一年 ›')
-            : null)),
-      h(Heatmap, { days: data.days, year: year })))
+        h('span', { className: 'tks-activity-title' }, 'Token 活动')),
+      h(Heatmap, { days: data.days })))
 }
 
 function RunCard() {
@@ -265,10 +237,6 @@ const CSS = [
   '.tks-card-sub{font-size:11px;opacity:.45;margin-top:4px}',
   '.tks-activity-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}',
   '.tks-activity-title{font-size:15px;font-weight:600}',
-  '.tks-pager{display:flex;align-items:center;gap:8px}',
-  '.tks-page-btn{border:1px solid rgba(128,128,128,.4);border-radius:6px;background:transparent;font-size:12px;padding:2px 8px;cursor:pointer;color:inherit;opacity:.75}',
-  '.tks-page-btn:hover{opacity:1}',
-  '.tks-page-year{font-size:13px;opacity:.75;min-width:44px;text-align:center}',
   // 顶部留白给首行方块的悬停提示（容器 overflow-x:auto 会同时裁剪纵向溢出）
   '.tks-heatmap-wrap{overflow-x:auto;padding:32px 2px 8px}',
   '.tks-heatmap{display:flex;gap:3px}',
