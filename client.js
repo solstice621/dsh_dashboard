@@ -6,10 +6,9 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v11（部署中；v10 = pkg-18）
-// v11 变更（仅 client.js，观感微调）：
-//   1. 月份标签带上年份：「2026年8月」（跨年视图一目了然）
-//   2. 格子空隙 2px→1px（网格横向/纵向、月份行），尺寸上限 14→16px，宽度公式同步
+// 版本：v12（部署中；v11 = pkg-19）
+// v12 变更（仅 client.js）：
+//   悬停提示日期由「8月15日」改为「2026年8月15日」（年月日）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -45,11 +44,12 @@ function cellLevel(v, max) {
   if (r >= 0.18) return 2
   return 1
 }
-// 悬停提示文案：「8月15日消耗了 27.3 万 Token · 34 次请求」
+// 悬停提示文案：「2026年8月15日消耗了 27.3 万 Token · 34 次请求」
 function tipText(cell) {
+  const y = parseInt(cell.date.slice(0, 4), 10)
   const m = parseInt(cell.date.slice(5, 7), 10)
   const d = parseInt(cell.date.slice(8, 10), 10)
-  const head = m + '月' + d + '日'
+  const head = y + '年' + m + '月' + d + '日'
   return cell.total > 0
     ? head + '消耗了 ' + fmtTokens(cell.total) + ' Token · ' + cell.requests + ' 次请求'
     : head + '没有 Token 消耗'
