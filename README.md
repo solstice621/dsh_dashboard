@@ -1,95 +1,100 @@
-# dsh-token-stats — Token 用量统计（Codex 风格）
+# dsh-token-stats — Codex-style token usage dashboard
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-blue)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/topic-deepseek--harness-blue)](https://github.com/topics/deepseek-harness)
 
-为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）Web UI 提供
-Codex 个人主页风格的 Token 用量统计仪表盘：5 统计卡 + GitHub 风格热力图（每日/每周）+
-洞察 + 模型用量排名。
+English | [简体中文](README.zh.md)
 
-![dsh-token-stats 仪表盘截图](assets/dsh_dashboard.png)
+A Codex-style token usage dashboard for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) Web UI:
+5 stat cards + a GitHub-style activity heatmap (daily / weekly) + insights + per-model usage ranking.
+The UI follows the DSH language setting: Chinese interface → Chinese dashboard, anything else → English.
 
-## ✨ 功能
+![dsh-token-stats dashboard](assets/dsh_dashboard.png)
 
-- **5 统计卡**：累计 Token 数 / 峰值 Token 数（单日）/ 最长聊天时长 / 当前连续天数 / 最长连续天数；数值字号自适应单行
-- **热力图**：53 列 × 7 行滚动视图（今天恒在最右下角），悬停显示「2026年8月15日消耗了 xx Token · N 次请求」；
-  「每日 / 每周」视图切换（每周为自下而上填充的 7 格柱状条，悬停显示周用量）
-- **洞察**：聊天总数、LLM 请求数、会话总数、活跃天数、缓存命中率、平均每轮 Token/时长
-- **最喜欢的模型**：供应商-模型（provider/model）Token 用量排名 Top5 + 比例条
-- **数据源**：全部会话日志（`assistant/message` 的 `data.usage` + `request/header` 的模型归属 +
-  `turn/start`/`turn/end` 时长），实时增量更新，无需独立持久化
+## ✨ Features
 
-## 🚀 安装（bundle 方式，推荐）
+- **5 stat cards**: total tokens / peak tokens (single day) / longest chat / current streak / longest streak; auto-shrinking one-line values
+- **Heatmap**: 53×7 rolling grid (today pinned to the bottom-right corner), hover for `Aug 15, 2026: 273k tokens · 34 requests`;
+  **Daily / Weekly** view toggle (weekly = bottom-up 7-cell bars, hover for the week total)
+- **Insights**: total turns, LLM requests, sessions, active days, cache hit rate, avg tokens & duration per turn
+- **Favorite models**: provider/model token ranking (Top 5) with ratio bars
+- **Data source**: session logs (`assistant/message` usage + `request/header` model attribution + `turn/start`/`turn/end` durations), live incremental updates, no extra persistence
+
+## 🚀 Install (bundle)
 
 ```sh
 dsh plugin --profile web add github:solstice621/dsh_dashboard
-dsh --profile web   # 重启后生效
+dsh --profile web   # restart to apply
 ```
 
-安装后打开 **设置 → 统计** 即可看到完整仪表盘。也可本地路径安装：
-`dsh plugin --profile web add file:/path/to/dsh-dashboard`。
+Then open **Settings → Stats** for the full dashboard. Local install:
+`dsh plugin --profile web add file:/path/to/dsh-dashboard`.
 
-> 首次打开时后台扫描全部历史会话（秒级~几十秒），之后通过 `session/event` 实时增量，
-> 仪表盘每 30s 自动刷新，无需手动操作。
+> On first open the plugin scans all historical sessions (seconds to a minute), then updates
+> in real time via `session/event`; the dashboard auto-refreshes every 30s — no manual action needed.
 
-## 🧑‍💻 动态插件部署（维护者用）
+## 🧑‍💻 Dynamic-plugin deployment (maintainers)
 
-本仓库同时维护一套动态 Cordis 插件（`toksta-5`，会话内 `cordis_define` 部署，
-适合在不重启 profile 的情况下迭代）：
+This repo also maintains a dynamic Cordis plugin (`toksta-5`, deployed in-session via `cordis_define`,
+handy for iterating without restarting the profile):
 
-1. `cordis_inspect_list` / `cordis_inspect_query` 核对契约（sessionQuery、session/event、
-   session/created、harness、React/host/styles builtin、settings.section、timer）；
-2. `cordis_define`：`plugin.kind: "new"`，`idPrefix: "toksta"`，`code.host` = `host.js`，`code.client` = `client.js`；
-3. `cordis_run`（mode=`run`/`update`）激活。
+1. Verify contracts with `cordis_inspect_list` / `cordis_inspect_query` (sessionQuery, session/event,
+   session/created, harness, React/host/styles builtins, settings.section, timer, locale);
+2. `cordis_define`: `plugin.kind: "new"`, `idPrefix: "toksta"`, `code.host` = `host.js`, `code.client` = `client.js`;
+3. `cordis_run` (mode=`run`/`update`) to activate.
 
-> ⚠️ bundle 版与动态版注册同一个设置分区 id（`token-stats`），同时启用会重复；切换前先停掉另一方。
+> ⚠️ The bundle and the dynamic plugin register the same settings section id (`token-stats`);
+> don't run both at once — stop one before enabling the other.
 
-## 📁 文件
+## 📁 Files
 
-| 文件 | 说明 |
+| File | Description |
 | --- | --- |
-| `lib/index.js` | **bundle Host 半**：折叠器 + 回补 + 实时监听 + `GET /api/token-stats`（`POST /api/token-stats/rescan` 备用） |
-| `lib/client.js` | **bundle Client 半**：`window.__ModuleLoader__.load` 工厂，注册「设置 → 统计」 |
-| `cordis.patch.yml` | bundle patch：插入 `id: token-stats` 插件行 |
-| `package.json` | npm 包声明（`dsh.bundle` / `dsh.client` manifest） |
-| `assets/dsh_dashboard.png` | 仪表盘截图 |
-| `host.js` / `client.js` | 动态插件版 Host/Client 函数体（`cordis_define` 直接用） |
-| `plugin.json` | 插件元信息与版本历史（pkg-9 … pkg-26） |
-| `plan.md` / `progress.md` | 策划文档与进度档案（含全部故障/修复记录） |
+| `lib/index.js` | **Bundle host half**: folder + backfill + live listeners + `GET /api/token-stats` (`POST /api/token-stats/rescan` as fallback) |
+| `lib/client.js` | **Bundle client half**: `window.__ModuleLoader__.load` factory, registers "Settings → Stats" |
+| `cordis.patch.yml` | bundle patch: inserts the `id: token-stats` plugin row |
+| `package.json` | npm package manifest (`dsh.bundle` / `dsh.client`) |
+| `host.js` / `client.js` | Dynamic-plugin host/client function bodies (paste into `cordis_define`) |
+| `plugin.json` | Plugin metadata & package history (pkg-9 … pkg-27) |
+| `plan.md` / `progress.md` | Design docs & progress log (incl. every bug/fix) |
+| `assets/dsh_dashboard.png` | Dashboard screenshot |
 
-## ✅ 验收清单
+## ✅ Acceptance checklist
 
-- [ ] 设置 → 统计：5 统计卡一行等宽、数值单行不换行、标签同高
-- [ ] 热力图 53 列、今天在最右下角、悬停显示年月日用量；「每日/每周」可切换
-- [ ] 月份轴与格子逐列对齐；无横向滚动条
-- [ ] 洞察 7 项数据正确；模型排名 Top5 与比例条正确
-- [ ] 新对话产生后 30s 内数据自动更新
+- [ ] Settings → Stats: 5 equal-width cards, one-line values, aligned labels
+- [ ] 53-column heatmap, today at bottom-right, year-month-day hover tips; Daily/Weekly toggle works
+- [ ] Month axis aligned to columns; no horizontal scrollbar
+- [ ] Insights (7 rows) and Top-5 model ranking with bars correct
+- [ ] New conversations show up within 30s
+- [ ] Language switch (zh ↔ en) relabels the whole dashboard on the fly
 
-## 🩺 排错速查
+## 🩺 Troubleshooting
 
-| 症状 | 根因与修法 |
+| Symptom | Cause / fix |
 | --- | --- |
-| `pnpm not found on PATH` | `dsh plugin` 依赖 pnpm：`corepack enable pnpm`（Node ≥16.10 自带 corepack） |
-| 设置里出现两个「统计」分区 | bundle 版与动态版（toksta-5）同时启用；先停掉一方 |
-| 页面只有裸文字，热力图/卡片全无 | CSS 没注入：动态版 `styles` 是 Client Builtin（`styles.insert(css)`），不能 `ctx.get('styles')`；bundle 版经 `<style>` 注入 |
-| Client 渲染崩溃 `ctx is not defined` | 组件函数里没有 `ctx`，它只在 `apply(ctx)` 作用域；定时器经模块级桥（`intervalRef = (cb, ms) => ctx.interval(...)`）调用 |
-| `service "timer" is not declared` | 确认 client 有 timer Service；没有就删 `inject: ['timer']` |
-| 热力图下方闪现滚动条 | 旧版月份行 nowrap 标签文字撑大 scrollable overflow；容器与月份行已 `overflow:hidden` 根治 |
-| `console.warn` 抛错 | Host builtin 只有 `console.log/error`，用 `console.error` |
+| `pnpm not found on PATH` | `dsh plugin` needs pnpm: `corepack enable pnpm` (bundled with Node ≥16.10) |
+| Two "Stats" sections in Settings | bundle + dynamic plugin (toksta-5) both active; stop one |
+| Plain text, no styles at all | CSS not injected: dynamic `styles` is a Client Builtin (`styles.insert(css)`), not `ctx.get('styles')`; bundle injects via `<style>` |
+| Client render crash `ctx is not defined` | `ctx` only exists in `apply(ctx)`; components use the module-level timer bridge (`intervalRef = (cb, ms) => ctx.interval(...)`) |
+| `service "timer" is not declared` | client has no timer Service; drop `inject: ['timer']` |
+| Horizontal scrollbar flashes under the heatmap | old month-label `nowrap` text inflated scrollable overflow; container & month row are `overflow:hidden` now |
+| `console.warn` throws | Host builtins only expose `console.log/error`; use `console.error` |
 
-## 📐 已知边界
+## 📐 Known boundaries
 
-- 只统计适配器回报了 usage 的调用（`assistant/message.usage` 缺失时跳过）；
-- 模型归属：`assistant/message` 无 model 字段，按该会话最近一次 `request/header` 的 provider/model 归因；
-- 当前连续天数：今天未用时算到昨天；中断未关闭的 turn 不计时长；
-- 会话标题类辅助调用（`session/title-llm-request`）不计入。
+- Only calls whose adapter reports `usage` are counted (skipped when `assistant/message.usage` is absent);
+- Model attribution: `assistant/message` has no model field — usage is attributed to the session's latest
+  `request/header` provider/model;
+- Current streak counts to yesterday when today has no usage; interrupted (unclosed) turns add no duration;
+- Title-generation calls (`session/title-llm-request`) are not counted.
 
-## 🌐 生态
+## 🌐 Ecosystem
 
-- 已打 `dsh-plugin` 等 Topics，可被 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness)
-  与 [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace) 自动发现；
-- 待办：awesome-dsh-plugin 收录 PR、市场 Registry 验证。
+- Repo carries the `dsh-plugin` topic, auto-discoverable by
+  [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) and
+  [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace);
+- TODO: awesome-dsh-plugin listing PR, marketplace registry validation.
 
 ## 📄 License
 

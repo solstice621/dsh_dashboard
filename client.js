@@ -3,12 +3,16 @@
 // 用法：本文件内容即 cordis_define 的 code.client「函数体」——整段复制粘贴即可。
 // 依赖（部署前用 cordis_inspect_query 核对）：
 //   - Client Builtin：React、host、styles（styles 是 Builtin！不能用 ctx.get('styles')）
-//   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
+//   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）、
+//     locale（可选：getLocale().active ∈ zh|en，跟随 DSH 语言切换中/英 UI）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v18（部署中；v17 = pkg-25）
-// v18 变更（仅 client.js）：
-//   用户可见名称「Token 用量」统一改为「统计」（设置页入口 / 页面标题 / Run 卡片）
+// 版本：v19（部署中；v18 = pkg-26）
+// v19 变更（仅 client.js，i18n）：
+//   1. 全部用户可见文案进 DICT（zh/en 双语），locale.getLocale().active === 'zh' 时中文，
+//      其他（en）时英文；locale.subscribe 订阅切换并重渲染
+//   2. 数值/时长/日期/月份标签双语格式：zh 亿·万 / X 小时 Y 分 / 2026年8月15日 / 8月；
+//      en B·M·k / 7h 20m / Aug 15, 2026 / Aug
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -16,22 +20,130 @@ function dayKeyOf(time) {
   const d = new Date(time)
   return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
 }
+
+// ---- i18n ----
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const DICT = {
+  zh: {
+    title: '统计',
+    subtitle: '共 {s} 个会话 · {r} 次请求 · {d} 个活跃日',
+    scanning: '正在扫描历史会话（{done}/{total}）…',
+    loading: '加载中…',
+    loadFailed: '加载失败：',
+    cardTotal: '累计 Token 数',
+    cardPeak: '峰值 Token 数',
+    peakSub: '{date} · 单次峰值 {t}',
+    cardChat: '最长聊天时长',
+    turnSub: '最长单轮 {t}',
+    cardCur: '当前连续天数',
+    cardLong: '最长连续天数',
+    activity: 'Token 活动',
+    tabDaily: '每日',
+    tabWeekly: '每周',
+    consumed: '{date}消耗了 {t} Token · {n} 次请求',
+    none: '{date}没有 Token 消耗',
+    weekConsumed: '{start} ~ {end} 所在周消耗了 {t} Token',
+    runTotal: '累计 {t} · 今日连续 {n} 天 · 峰值日 {p}',
+    runHint: '完整图表见「设置 → 统计」',
+    insight: '洞察',
+    insTurns: '聊天总数',
+    insReqs: 'LLM 请求数',
+    insSessions: '会话总数',
+    insDays: '活跃天数',
+    insHit: '缓存命中率',
+    insAvgT: '平均每轮 Token',
+    insAvgD: '平均每轮时长',
+    valTurns: '{n} 轮',
+    valReqs: '{n} 次',
+    valSessions: '{n} 个',
+    valDays: '{n} 天',
+    valHit: '{n} %',
+    favModels: '最喜欢的模型',
+    noModels: '暂无模型数据',
+  },
+  en: {
+    title: 'Stats',
+    subtitle: '{s} sessions · {r} requests · {d} active days',
+    scanning: 'Scanning history ({done}/{total})…',
+    loading: 'Loading…',
+    loadFailed: 'Failed to load: ',
+    cardTotal: 'Total tokens',
+    cardPeak: 'Peak tokens',
+    peakSub: '{date} · single-call peak {t}',
+    cardChat: 'Longest chat',
+    turnSub: 'longest turn {t}',
+    cardCur: 'Current streak',
+    cardLong: 'Longest streak',
+    activity: 'Token activity',
+    tabDaily: 'Daily',
+    tabWeekly: 'Weekly',
+    consumed: '{date}: {t} tokens · {n} requests',
+    none: 'No token usage on {date}',
+    weekConsumed: '{start} ~ {end}: {t} tokens this week',
+    runTotal: 'Total {t} · {n}-day streak · peak day {p}',
+    runHint: 'Full dashboard: Settings → Stats',
+    insight: 'Insights',
+    insTurns: 'Total turns',
+    insReqs: 'LLM requests',
+    insSessions: 'Sessions',
+    insDays: 'Active days',
+    insHit: 'Cache hit rate',
+    insAvgT: 'Avg tokens / turn',
+    insAvgD: 'Avg turn duration',
+    valTurns: '{n}',
+    valReqs: '{n}',
+    valSessions: '{n}',
+    valDays: '{n}',
+    valHit: '{n}%',
+    favModels: 'Favorite models',
+    noModels: 'No model data',
+  },
+}
+let activeLang = 'zh'
+const i18nListeners = new Set()
+function t(key) {
+  const d = DICT[activeLang] || DICT.en
+  return key in d ? d[key] : key
+}
+function tf(key, vars) {
+  let s = t(key)
+  if (vars) {
+    for (const k in vars) s = s.split('{' + k + '}').join(String(vars[k]))
+  }
+  return s
+}
+// 语言切换时强制重渲染（Dashboard/RunCard 调用）
+function useT() {
+  const st = React.useState(0)
+  React.useEffect(() => {
+    const fn = () => st[1]((v) => v + 1)
+    i18nListeners.add(fn)
+    return () => i18nListeners.delete(fn)
+  }, [])
+}
+
 function fmtTokens(n) {
   if (!n) return '0'
-  if (n >= 1e8) {
-    const v = (n / 1e8).toFixed(1)
-    return (v.endsWith('.0') ? v.slice(0, -2) : v) + ' 亿'
+  const trim1 = (v) => { const s = v.toFixed(1); return s.endsWith('.0') ? s.slice(0, -2) : s }
+  if (activeLang === 'en') {
+    if (n >= 1e9) return trim1(n / 1e9) + 'B'
+    if (n >= 1e6) return trim1(n / 1e6) + 'M'
+    if (n >= 1e3) return trim1(n / 1e3) + 'k'
+    return String(n)
   }
-  if (n >= 1e4) {
-    const v = (n / 1e4).toFixed(1)
-    return (v.endsWith('.0') ? v.slice(0, -2) : v) + ' 万'
-  }
+  if (n >= 1e8) return trim1(n / 1e8) + ' 亿'
+  if (n >= 1e4) return trim1(n / 1e4) + ' 万'
   return String(n)
 }
 function fmtDuration(ms) {
-  if (!ms) return '0 分钟'
+  if (!ms) return activeLang === 'en' ? '0m' : '0 分钟'
   const hour = Math.floor(ms / 3600000)
   const min = Math.round((ms % 3600000) / 60000)
+  if (activeLang === 'en') {
+    if (hour > 0) return hour + 'h ' + min + 'm'
+    if (min > 0) return min + 'm'
+    return Math.floor(ms / 1000) + 's'
+  }
   if (hour > 0) return hour + ' 小时 ' + min + ' 分'
   if (min > 0) return min + ' 分钟'
   return Math.floor(ms / 1000) + ' 秒'
@@ -44,28 +156,29 @@ function cellLevel(v, max) {
   if (r >= 0.18) return 2
   return 1
 }
-// 日期头部：「2026年8月15日」
+// 日期头部：「2026年8月15日」/「Aug 15, 2026」
 function dateHead(date) {
   const y = parseInt(date.slice(0, 4), 10)
   const m = parseInt(date.slice(5, 7), 10)
   const d = parseInt(date.slice(8, 10), 10)
+  if (activeLang === 'en') return MONTHS_EN[m - 1] + ' ' + d + ', ' + y
   return y + '年' + m + '月' + d + '日'
 }
-// 悬停提示文案：「2026年8月15日消耗了 27.3 万 Token · 34 次请求」
+// 悬停提示：「2026年8月15日消耗了 27.3 万 Token · 34 次请求」
 function tipText(cell) {
   const head = dateHead(cell.date)
   return cell.total > 0
-    ? head + '消耗了 ' + fmtTokens(cell.total) + ' Token · ' + cell.requests + ' 次请求'
-    : head + '没有 Token 消耗'
+    ? tf('consumed', { date: head, t: fmtTokens(cell.total), n: cell.requests })
+    : tf('none', { date: head })
 }
-// 每周悬停提示：「2026年8月9日 ~ 2026年8月15日 所在周消耗了 27.3 万 Token」
+// 每周悬停提示
 function weekTipText(start, end, total) {
-  return dateHead(start) + ' ~ ' + dateHead(end) + ' 所在周消耗了 ' + fmtTokens(total) + ' Token'
+  return tf('weekConsumed', {
+    start: dateHead(start), end: dateHead(end), t: fmtTokens(total),
+  })
 }
-// 网格列数：53 列 ≈ 一年（与参考截图一致），最后一列以今天结尾
+// 网格列数：53 列 ≈ 一年，最后一列以今天结尾，今天恒在最右下角
 const GRID_COLUMNS = 53
-// 组装滚动网格：每列 = 连续 7 天（上→下 = 早→晚），列尾固定为今天的星期，
-// 最后一列 = [今天-6 .. 今天]，今天恒在最右下角；向左每列再往前推 7 天。
 function buildGrid(days, colCount) {
   const map = new Map()
   for (const d of days) map.set(d.date, d)
@@ -73,7 +186,6 @@ function buildGrid(days, colCount) {
   const weeks = []
   let max = 0
   for (let k = 0; k < colCount; k += 1) {
-    // 该列最后一天：今天 - 7*(colCount-1-k) 天（恒为今天的星期）
     const colEnd = new Date(today)
     colEnd.setDate(colEnd.getDate() - 7 * (colCount - 1 - k))
     const week = []
@@ -88,8 +200,7 @@ function buildGrid(days, colCount) {
     }
     weeks.push(week)
   }
-  // 月份标签：锚定「包含该月 1 日」的那一列（与 GitHub 一致）；
-  // 网格起点落在月中间时，该月不标记。
+  // 月份标签：锚定「包含该月 1 日」的那一列；网格起点落在月中间时该月不标记
   const monthLabels = []
   const firstDay = new Date(weeks[0][0].date + 'T00:00:00')
   firstDay.setDate(firstDay.getDate() - 1)
@@ -103,7 +214,9 @@ function buildGrid(days, colCount) {
     for (let m = mFirst; m <= mLast; m += 1) {
       if (m > lastLabelMonth) {
         lastLabelMonth = m
-        if (label === '') label = ((m % 12) + 1) + '月'
+        if (label === '') {
+          label = activeLang === 'en' ? MONTHS_EN[m % 12] : ((m % 12) + 1) + '月'
+        }
       }
     }
     monthLabels.push(label)
@@ -118,8 +231,6 @@ function startInterval(callback, delay) {
 }
 
 // 自适应单行数值：测得溢出时按比例缩小字号（22px 起，最低 12px）
-// 不经过 React state，直接改内联样式，避免测量-渲染循环；
-// ResizeObserver 存在时跟随卡片宽度变化实时调整（不存在时随重渲染/文本变化重测）。
 function FitValue(props) {
   const ref = React.useRef(null)
   React.useLayoutEffect(() => {
@@ -154,9 +265,7 @@ function StatCard(props) {
 function Heatmap(props) {
   const wrapRef = React.useRef(null)
   const g = buildGrid(props.days, GRID_COLUMNS)
-  // 宽度自适应：按容器宽度计算格子尺寸（--tks-size，4~14px），gap=0 精确填充；
-  // 保证 53 列总宽不超出容器（配合容器 overflow-x:hidden，任何时刻都不会出现滚动条）；
-  // 直接改内联变量，不经 React state。
+  // 宽度自适应：按容器宽度计算格子尺寸（--tks-size，4~16px）
   React.useLayoutEffect(() => {
     const el = wrapRef.current
     if (!el) return undefined
@@ -178,7 +287,6 @@ function Heatmap(props) {
   const columns = g.weeks.map((week, wi) =>
     h('div', { key: wi, className: 'tks-col' },
       week.map((c, ci) => {
-        // 靠左/右边缘的列，提示框改为贴边对齐，避免被滚动容器裁掉
         let edge = ''
         if (wi < 8) edge = ' tks-tip-left'
         else if (wi >= colCount - 2) edge = ' tks-tip-right'
@@ -187,7 +295,7 @@ function Heatmap(props) {
           className: 'tks-cell tks-lv' + cellLevel(c.total, g.max) + edge,
         }, h('span', { className: 'tks-tip' }, tipText(c)))
       })))
-  // 每周柱状：每列 = 一周用量，7 格自下而上填充；最大周 7 格全满，其余按比例取整数格
+  // 每周柱状：每列 = 一周用量，7 格自下而上填充；最大周全满，其余按比例整数格
   const weekTotals = []
   let maxWeek = 0
   for (const w of g.weeks) {
@@ -205,7 +313,6 @@ function Heatmap(props) {
     const tip = weekTipText(w[0].date, w[6].date, weekTotals[wi])
     return h('div', { key: wi, className: 'tks-col' },
       w.map((c, ci) => {
-        // 自下而上：底格索引 6；ci >= 7 - filled 的格为满格
         const full = ci >= 7 - filledCount[wi]
         return h('div', {
           key: ci,
@@ -221,7 +328,51 @@ function Heatmap(props) {
       g.monthLabels.map((m, i) => h('span', { key: i }, m))))
 }
 
+// 洞察：一组有趣的小数据
+function Insights(props) {
+  const d = props.data
+  const hit = d.totalTokens > 0 ? Math.round(100 * d.totalCacheRead / d.totalTokens) : 0
+  const perTurnTokens = d.totalTurns > 0 ? fmtTokens(Math.round(d.totalTokens / d.totalTurns)) : '0'
+  const perTurnMs = d.totalTurns > 0 ? Math.round(d.totalChatMs / d.totalTurns) : 0
+  const rows = [
+    [t('insTurns'), tf('valTurns', { n: d.totalTurns })],
+    [t('insReqs'), tf('valReqs', { n: d.totalRequests })],
+    [t('insSessions'), tf('valSessions', { n: d.totalSessions })],
+    [t('insDays'), tf('valDays', { n: d.activeDays })],
+    [t('insHit'), tf('valHit', { n: hit })],
+    [t('insAvgT'), perTurnTokens],
+    [t('insAvgD'), fmtDuration(perTurnMs)],
+  ]
+  return h('div', { className: 'tks-insight-panel' },
+    h('div', { className: 'tks-insight-title' }, t('insight')),
+    h('div', { className: 'tks-insight-list' },
+      rows.map((r, i) => h('div', { key: i, className: 'tks-insight-row' },
+        h('span', { className: 'tks-insight-label' }, r[0]),
+        h('span', { className: 'tks-insight-value' }, r[1])))))
+}
+
+// 最喜欢的模型：provider/model 的 token 用量排名（Top5 + 比例条）
+function ModelRanking(props) {
+  const models = (props.data.models || []).slice(0, 5)
+  const max = models.length ? models[0].tokens : 0
+  return h('div', { className: 'tks-insight-panel' },
+    h('div', { className: 'tks-insight-title' }, t('favModels')),
+    models.length === 0
+      ? h('div', { className: 'tks-insight-empty' }, t('noModels'))
+      : h('div', { className: 'tks-model-list' },
+        models.map((m, i) => h('div', { key: m.key, className: 'tks-model-row' },
+          h('div', { className: 'tks-model-top' },
+            h('span', { className: 'tks-model-name' }, (i + 1) + '. ' + m.key),
+            h('span', { className: 'tks-model-val' }, fmtTokens(m.tokens))),
+          h('div', { className: 'tks-model-bar-wrap' },
+            h('div', {
+              className: 'tks-model-bar',
+              style: { width: (max > 0 ? Math.max(2, Math.round(100 * m.tokens / max)) : 0) + '%' },
+            }))))))
+}
+
 function Dashboard(props) {
+  useT() // 语言切换时重渲染
   const st = React.useState(null)
   const data = st[0]; const setData = st[1]
   const errSt = React.useState(null)
@@ -236,42 +387,42 @@ function Dashboard(props) {
     const t = startInterval(load, 30000) // 每 30s 自动刷新一次
     return t || undefined
   }, [])
-  if (error) return h('div', { className: 'tks-root' }, '加载失败：', error)
-  if (!data) return h('div', { className: 'tks-root' }, '加载中…')
+  if (error) return h('div', { className: 'tks-root' }, t('loadFailed'), error)
+  if (!data) return h('div', { className: 'tks-root' }, t('loading'))
   return h('div', { className: 'tks-root' },
     h('div', { className: 'tks-header' },
       h('div', null,
-        h('div', { className: 'tks-title' }, '统计'),
+        h('div', { className: 'tks-title' }, t('title')),
         h('div', { className: 'tks-subtitle' },
           data.scanning
-            ? '正在扫描历史会话（' + data.scannedSessions + '/' + data.totalSessions + '）…'
-            : '共 ' + data.totalSessions + ' 个会话 · ' + data.totalRequests + ' 次请求 · ' + data.activeDays + ' 个活跃日'))),
+            ? tf('scanning', { done: data.scannedSessions, total: data.totalSessions })
+            : tf('subtitle', { s: data.totalSessions, r: data.totalRequests, d: data.activeDays })))),
     h('div', { className: 'tks-cards' },
-      h(StatCard, { value: fmtTokens(data.totalTokens), label: '累计 Token 数' }),
+      h(StatCard, { value: fmtTokens(data.totalTokens), label: t('cardTotal') }),
       h(StatCard, {
         value: data.peakDay ? fmtTokens(data.peakDay.total) : '0',
-        label: '峰值 Token 数',
-        sub: data.peakDay ? data.peakDay.date + ' · 单次峰值 ' + fmtTokens(data.peakStepTokens) : null,
+        label: t('cardPeak'),
+        sub: data.peakDay ? tf('peakSub', { date: data.peakDay.date, t: fmtTokens(data.peakStepTokens) }) : null,
       }),
       h(StatCard, {
         value: fmtDuration(data.longestChatMs),
-        label: '最长聊天时长',
-        sub: '最长单轮 ' + fmtDuration(data.longestTurnMs),
+        label: t('cardChat'),
+        sub: tf('turnSub', { t: fmtDuration(data.longestTurnMs) }),
       }),
-      h(StatCard, { value: data.streakCurrent + ' 天', label: '当前连续天数' }),
-      h(StatCard, { value: data.streakLongest + ' 天', label: '最长连续天数' })),
+      h(StatCard, { value: data.streakCurrent + ' 天', label: t('cardCur') }),
+      h(StatCard, { value: data.streakLongest + ' 天', label: t('cardLong') })),
     h('div', { className: 'tks-activity' },
       h('div', { className: 'tks-activity-head' },
-        h('span', { className: 'tks-activity-title' }, 'Token 活动'),
+        h('span', { className: 'tks-activity-title' }, t('activity')),
         h('div', { className: 'tks-tabs' },
           h('button', {
             className: 'tks-tab' + (view === 'daily' ? ' active' : ''),
             onClick: () => setView('daily'),
-          }, '每日'),
+          }, t('tabDaily')),
           h('button', {
             className: 'tks-tab' + (view === 'weekly' ? ' active' : ''),
             onClick: () => setView('weekly'),
-          }, '每周'))),
+          }, t('tabWeekly')))),
       h(Heatmap, { days: data.days, view: view }),
       h('div', { className: 'tks-insights-row' },
         h(Insights, { data: data }),
@@ -279,61 +430,21 @@ function Dashboard(props) {
 }
 
 function RunCard() {
+  useT() // 语言切换时重渲染
   const st = React.useState(null)
   const data = st[0]; const setData = st[1]
   React.useEffect(() => {
     host.call('get-stats').then(setData, () => {})
   }, [])
-  if (!data) return h('div', null, 'Token 统计加载中…')
+  if (!data) return h('div', null, t('loading'))
   return h('div', { className: 'tks-runcard' },
-    h('b', null, '统计：'),
-    '累计 ' + fmtTokens(data.totalTokens) +
-    ' · 今日连续 ' + data.streakCurrent + ' 天' +
-    ' · 峰值日 ' + (data.peakDay ? fmtTokens(data.peakDay.total) : '0'),
-    h('div', { className: 'tks-card-sub' }, '完整图表见「设置 → 统计」'))
-}
-
-// 洞察：一组有趣的小数据
-function Insights(props) {
-  const d = props.data
-  const hit = d.totalTokens > 0 ? Math.round(100 * d.totalCacheRead / d.totalTokens) : 0
-  const perTurnTokens = d.totalTurns > 0 ? fmtTokens(Math.round(d.totalTokens / d.totalTurns)) : '0'
-  const perTurnMs = d.totalTurns > 0 ? Math.round(d.totalChatMs / d.totalTurns) : 0
-  const rows = [
-    ['聊天总数', d.totalTurns + ' 轮'],
-    ['LLM 请求数', d.totalRequests + ' 次'],
-    ['会话总数', d.totalSessions + ' 个'],
-    ['活跃天数', d.activeDays + ' 天'],
-    ['缓存命中率', hit + ' %'],
-    ['平均每轮 Token', perTurnTokens],
-    ['平均每轮时长', fmtDuration(perTurnMs)],
-  ]
-  return h('div', { className: 'tks-insight-panel' },
-    h('div', { className: 'tks-insight-title' }, '洞察'),
-    h('div', { className: 'tks-insight-list' },
-      rows.map((r, i) => h('div', { key: i, className: 'tks-insight-row' },
-        h('span', { className: 'tks-insight-label' }, r[0]),
-        h('span', { className: 'tks-insight-value' }, r[1])))))
-}
-
-// 最喜欢的模型：provider/model 的 token 用量排名（Top5 + 比例条）
-function ModelRanking(props) {
-  const models = (props.data.models || []).slice(0, 5)
-  const max = models.length ? models[0].tokens : 0
-  return h('div', { className: 'tks-insight-panel' },
-    h('div', { className: 'tks-insight-title' }, '最喜欢的模型'),
-    models.length === 0
-      ? h('div', { className: 'tks-insight-empty' }, '暂无模型数据')
-      : h('div', { className: 'tks-model-list' },
-        models.map((m, i) => h('div', { key: m.key, className: 'tks-model-row' },
-          h('div', { className: 'tks-model-top' },
-            h('span', { className: 'tks-model-name' }, (i + 1) + '. ' + m.key),
-            h('span', { className: 'tks-model-val' }, fmtTokens(m.tokens))),
-          h('div', { className: 'tks-model-bar-wrap' },
-            h('div', {
-              className: 'tks-model-bar',
-              style: { width: (max > 0 ? Math.max(2, Math.round(100 * m.tokens / max)) : 0) + '%' },
-            }))))))
+    h('b', null, t('title'), '：'),
+    tf('runTotal', {
+      t: fmtTokens(data.totalTokens),
+      n: data.streakCurrent,
+      p: data.peakDay ? fmtTokens(data.peakDay.total) : '0',
+    }),
+    h('div', { className: 'tks-card-sub' }, t('runHint')))
 }
 
 const CSS = [
@@ -355,8 +466,6 @@ const CSS = [
   '.tks-tab.active{opacity:1;font-weight:600;border-bottom:2px solid currentColor}',
   // 顶部留白 22px 给首行方块的悬停提示（提示框已缩小）
   // overflow-x:hidden：稳态格子必然 ≤ 容器宽（fit 精确填充），不需要滚动条；
-  //   旧版 auto 时，月份行 nowrap 标签文字溢出会把 scrollWidth 撑过 clientWidth，
-  //   特定宽度下滚动条闪现；hidden 从根上消除
   // align-items:safe center：内容窄于容器时整体居中
   '.tks-heatmap-wrap{overflow-x:hidden;padding:22px 2px 8px;display:flex;flex-direction:column;align-items:safe center}',
   '.tks-heatmap{display:flex;gap:1px}',
@@ -373,7 +482,7 @@ const CSS = [
   '.tks-cell:hover .tks-tip{display:block}',
   '.tks-tip-left .tks-tip{left:-1px;transform:none}',
   '.tks-tip-right .tks-tip{left:auto;right:-1px;transform:none}',
-  // overflow:hidden：nowrap 标签文字（如「2026年10月」）宽过列距，防止其撑大 scrollable overflow
+  // overflow:hidden：nowrap 标签文字（如「10月」/「Aug」）宽过列距，防止其撑大 scrollable overflow
   '.tks-months{display:flex;gap:1px;margin-top:6px;font-size:10px;opacity:.55;overflow:hidden}',
   // span 宽 = 格子宽，pitch = 格子宽 + 1px gap，与热力网格严格同宽对齐
   '.tks-months span{width:var(--tks-size,12px);overflow:visible;white-space:nowrap}',
@@ -403,11 +512,26 @@ return {
   inject: ['timer'],
   apply(ctx) {
     intervalRef = (callback, delay) => ctx.interval(callback, delay)
+    // 语言跟随：locale 服务可选；active === 'zh' 用中文，其他（en）用英文
+    const locale = ctx.get('locale')
+    if (locale !== undefined) {
+      try {
+        const snap = locale.getLocale()
+        activeLang = snap && snap.active === 'zh' ? 'zh' : 'en'
+      } catch (e) { /* keep default */ }
+      ctx.effect(() => locale.subscribe(() => {
+        try {
+          const snap = locale.getLocale()
+          activeLang = snap && snap.active === 'zh' ? 'zh' : 'en'
+        } catch (e) { /* keep current */ }
+        for (const fn of i18nListeners) fn()
+      }))
+    }
     styles.insert(CSS) // styles 是 Builtin（模块级），不是 ctx Service
     const slots = ctx.get('slots')
     if (slots === undefined) return
     slots.inject('settings.section', () => slots.register(
-      { name: 'settings.section', id: 'token-stats', order: 20, label: () => '统计' },
+      { name: 'settings.section', id: 'token-stats', order: 20, label: () => t('title') },
       (props) => h(Dashboard, props),
     ))
     slots.inject('tool.view.cordis', () => slots.register(

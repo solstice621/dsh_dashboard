@@ -528,3 +528,40 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
   `dsh-plugin`、`deepseek-harness`、`dsh`、`cordis-plugin`、`token-usage`、`usage-stats`、`dashboard` ✅
 - README 重写为生态导向：安装（bundle）置顶、功能/验收/排错/边界/生态章节、徽章；
   新增 MIT LICENSE（package.json 与徽章引用）。
+
+---
+
+## 二十一、v19 i18n + README 双语（2026-08-15）✅ 已部署
+
+> 动态版部署：`pkg-27` / `run-27`（cordis_define kind=existing + update 激活）；`plugin.json` 已回填。
+> bundle 版 `lib/client.js` 同步移植 i18n（同源代码），随仓库推送。
+
+### 用户需求
+
+做英文适配（README + 插件本身）：插件界面跟随 DSH 语言设置——中文环境显示中文仪表盘，
+其他语言显示英文仪表盘。
+
+### 实现（client.js / lib/client.js，i18n）
+
+| 项 | 实现 |
+| --- | --- |
+| 语言检测 | Client `locale` Service（经 `cordis_inspect_query` 核实契约）：`getLocale().active ∈ ['zh','en']`；`subscribe(fn)` 监听切换 |
+| 文案字典 | `DICT = { zh, en }`（约 40 键：标题/副标题/统计卡/热力图提示/洞察/模型栏/加载态…）；`t(key)` / `tf(key, vars)` 带占位符格式化 |
+| 跟随切换 | `apply` 读取初始 locale + `ctx.effect(() => locale.subscribe(...))` 更新 `activeLang` 并触发 `i18nListeners`；组件 `useT()` 订阅强制重渲染 |
+| 数值格式 | zh：亿/万（1.2 亿）；en：B/M/k（123.2M / 273k） |
+| 时长格式 | zh：X 小时 Y 分；en：7h 20m / 54m / 45s |
+| 日期/月份 | zh：2026年8月15日 / 8月；en：Aug 15, 2026 / Aug（月份轴与悬停提示同源） |
+| 设置页 label | `() => t('title')`：zh「统计」/ en「Stats」，随语言即时变 |
+
+### 验证（本机 node）
+
+- `node --check`（CJS 模式，因 package.json `type: module` 需 `--input-type=commonjs`）通过；
+- i18n 纯函数双语断言全部正确（zh/en 各 8 项：数值/时长/日期/提示/周提示/标题/副标题/RunCard）；
+- 月份标签：zh「8月」/ en「Aug」✅；
+- bundle client 工厂冒烟通过（exports.inject=['timer']、apply 为函数）。
+
+### README 双语
+
+- `README.md` → 英文版（生态导向，含语言切换行 English | 简体中文）；
+- `README.zh.md` → 中文版（原内容 + i18n 特性 + 验收项）；
+- 两版互相链接；截图、徽章、安装/部署/排错/边界/生态章节一致。
