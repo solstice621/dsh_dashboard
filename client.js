@@ -6,11 +6,13 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v8（部署中；v7 = pkg-15）
-// v8 变更（纯观感微调，仅 client.js）：
-//   1. 格子空隙 2px→1px（网格横向/纵向、月份行、图例），宽度自适应公式同步
-//   2. 热力图整体水平居中（align-items:safe center）：容器够宽时格子按 12px 上限
-//      填满并与上方统计卡左右对齐；超出上限的余量左右居中
+// 版本：v9（部署中；v8 = pkg-16）
+// v9 变更（仅 client.js）：
+//   1. 格子空隙归零（gap:0），尺寸上限 12→14px，按容器宽度精确填充（size=(avail-4)/53）
+//   2. 根治滚动条闪现：容器 overflow-x:hidden（稳态必不溢出，无需滚动条）；
+//      月份行 overflow:hidden（nowrap 标签文字不再撑大 scrollable overflow——
+//      旧版「10月」等标签宽过列距，特定宽度下 scrollWidth>clientWidth 导致滚动条闪现）
+//   3. 自适应机制不变：测容器宽 → 计算 --tks-size → ResizeObserver 跟随窗口/面板变化
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -147,15 +149,15 @@ function StatCard(props) {
 function Heatmap(props) {
   const wrapRef = React.useRef(null)
   const g = buildGrid(props.days, GRID_COLUMNS)
-  // 宽度自适应：按容器宽度计算格子尺寸（--tks-size，4~12px），
-  // 保证 53 列总宽不超出容器（无横向滚动条）；直接改内联变量，不经 React state。
+  // 宽度自适应：按容器宽度计算格子尺寸（--tks-size，4~14px），gap=0 精确填充；
+  // 保证 53 列总宽不超出容器（配合容器 overflow-x:hidden，任何时刻都不会出现滚动条）；
+  // 直接改内联变量，不经 React state。
   React.useLayoutEffect(() => {
     const el = wrapRef.current
     if (!el) return undefined
     const fit = () => {
       const avail = el.clientWidth
-      const size = Math.max(4, Math.min(12,
-        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 1) / GRID_COLUMNS)))
+      const size = Math.max(4, Math.min(14, Math.floor((avail - 4) / GRID_COLUMNS)))
       el.style.setProperty('--tks-size', size + 'px')
     }
     fit()
@@ -268,13 +270,16 @@ const CSS = [
   '.tks-card-sub{font-size:11px;opacity:.45;margin-top:4px}',
   '.tks-activity-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}',
   '.tks-activity-title{font-size:15px;font-weight:600}',
-  // 顶部留白 22px 给首行方块的悬停提示（提示框已缩小；容器 overflow-x:auto 会同时裁剪纵向溢出）
-  // align-items:safe center：内容窄于容器时整体居中；极端窄时回退左对齐不丢内容
-  '.tks-heatmap-wrap{overflow-x:auto;padding:22px 2px 8px;display:flex;flex-direction:column;align-items:safe center}',
-  '.tks-heatmap{display:flex;gap:1px}',
-  '.tks-col{display:flex;flex-direction:column;gap:1px}',
-  // 格子尺寸由 Heatmap 按容器宽度计算（--tks-size），默认 10px
-  '.tks-cell{width:var(--tks-size,10px);height:var(--tks-size,10px);border-radius:2px;display:inline-block;position:relative}',
+  // 顶部留白 22px 给首行方块的悬停提示（提示框已缩小）
+  // overflow-x:hidden：稳态格子必然 ≤ 容器宽（fit 精确填充），不需要滚动条；
+  //   旧版 auto 时，月份行 nowrap 标签文字溢出会把 scrollWidth 撑过 clientWidth，
+  //   特定宽度下滚动条闪现；hidden 从根上消除
+  // align-items:safe center：内容窄于容器时整体居中
+  '.tks-heatmap-wrap{overflow-x:hidden;padding:22px 2px 8px;display:flex;flex-direction:column;align-items:safe center}',
+  '.tks-heatmap{display:flex;gap:0}',
+  '.tks-col{display:flex;flex-direction:column;gap:0}',
+  // 格子尺寸由 Heatmap 按容器宽度计算（--tks-size），默认 12px
+  '.tks-cell{width:var(--tks-size,12px);height:var(--tks-size,12px);border-radius:2px;display:inline-block;position:relative}',
   '.tks-lv0{background:rgba(128,128,128,.14)}',
   '.tks-lv1{background:#f6c9b3}',
   '.tks-lv2{background:#ef9f7d}',
@@ -283,12 +288,13 @@ const CSS = [
   // 自定义悬停提示：纯 CSS 跟随 :hover，不依赖 window/document
   '.tks-tip{display:none;position:absolute;bottom:13px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(32,32,32,.94);color:#fafafa;font-size:10px;line-height:1.45;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}',
   '.tks-cell:hover .tks-tip{display:block}',
-  '.tks-tip-left .tks-tip{left:-1px;transform:none}',
-  '.tks-tip-right .tks-tip{left:auto;right:-1px;transform:none}',
-  '.tks-months{display:flex;gap:1px;margin-top:6px;font-size:10px;opacity:.55}',
-  // span 宽 = 格子宽，pitch = 格子宽 + 1px gap，与热力网格严格同宽对齐
-  '.tks-months span{width:var(--tks-size,10px);overflow:visible;white-space:nowrap}',
-  '.tks-legend{display:flex;align-items:center;gap:1px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
+  '.tks-tip-left .tks-tip{left:0;transform:none}',
+  '.tks-tip-right .tks-tip{left:auto;right:0;transform:none}',
+  // overflow:hidden：nowrap 标签文字（如「10月」）宽过列距，防止其撑大 scrollable overflow
+  '.tks-months{display:flex;gap:0;margin-top:6px;font-size:10px;opacity:.55;overflow:hidden}',
+  // span 宽 = 格子宽，pitch = 格子宽（gap 0），与热力网格严格同宽对齐
+  '.tks-months span{width:var(--tks-size,12px);overflow:visible;white-space:nowrap}',
+  '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',
 ].join('\n')
 
