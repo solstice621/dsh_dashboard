@@ -565,3 +565,29 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - `README.md` → 英文版（生态导向，含语言切换行 English | 简体中文）；
 - `README.zh.md` → 中文版（原内容 + i18n 特性 + 验收项）；
 - 两版互相链接；截图、徽章、安装/部署/排错/边界/生态章节一致。
+
+---
+
+## 二十二、v20 修复英文残留（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-28` / `run-28`（cordis_define kind=existing + update 激活）；`plugin.json` 已回填。
+> bundle 版 `lib/client.js` 同步修复。
+
+### 用户反馈（切英文后）
+
+1. 设置面板名字仍显示「统计」；
+2. 连续天数显示「1天」（应为英文）。
+
+### 根因与修复（仅 client.js）
+
+| 问题 | 根因 | 修复 |
+| --- | --- | --- |
+| 面板名不切换 | shell 的 settings 列表用 `useSyncExternalStore`：locale 变化时**同步重渲染**并重新调用 `label()`，早于我们的 `locale.subscribe` 回调（此时 `activeLang` 还是 'zh'）→ 解析出「统计」且快照已缓存 | label 改为调用时**直接读 `locale.getLocale()` 快照**（`snap.active === 'zh' ? '统计' : 'Stats'`），免疫回调时序 |
+| 天数不切换 | `data.streakCurrent + ' 天'` 硬编码中文，漏 i18n | 改用 `tf('valDays', { n })`（en 无后缀 / zh「N 天」） |
+| RunCard 冒号 | `t('title') + '：'` 全角冒号在英文下不协调 | 按语言：en `': '` / zh `'：'` |
+
+### 验证（本机 node）
+
+- 语法通过（动态 CJS 模式 / bundle ESM）；
+- `tf('valDays', {n:1})`：en → `1`、zh → `1 天` ✅；
+- label 读快照逻辑：snapshot.en → `Stats`、snapshot.zh → `统计` ✅。

@@ -409,8 +409,8 @@ function Dashboard(props) {
         label: t('cardChat'),
         sub: tf('turnSub', { t: fmtDuration(data.longestTurnMs) }),
       }),
-      h(StatCard, { value: data.streakCurrent + ' 天', label: t('cardCur') }),
-      h(StatCard, { value: data.streakLongest + ' 天', label: t('cardLong') })),
+      h(StatCard, { value: tf('valDays', { n: data.streakCurrent }), label: t('cardCur') }),
+      h(StatCard, { value: tf('valDays', { n: data.streakLongest }), label: t('cardLong') })),
     h('div', { className: 'tks-activity' },
       h('div', { className: 'tks-activity-head' },
         h('span', { className: 'tks-activity-title' }, t('activity')),
@@ -438,7 +438,7 @@ function RunCard() {
   }, [])
   if (!data) return h('div', null, t('loading'))
   return h('div', { className: 'tks-runcard' },
-    h('b', null, t('title'), '：'),
+    h('b', null, activeLang === 'en' ? t('title') + ': ' : t('title') + '：'),
     tf('runTotal', {
       t: fmtTokens(data.totalTokens),
       n: data.streakCurrent,
@@ -531,7 +531,17 @@ return {
     const slots = ctx.get('slots')
     if (slots === undefined) return
     slots.inject('settings.section', () => slots.register(
-      { name: 'settings.section', id: 'token-stats', order: 20, label: () => t('title') },
+      { name: 'settings.section', id: 'token-stats', order: 20, label: () => {
+        // 读取调用时刻的 locale 快照（不依赖 subscribe 回调时序：
+        // shell 的 settings 列表在 locale 变化时会同步重渲染并重新调用 label）
+        if (locale !== undefined) {
+          try {
+            const snap = locale.getLocale()
+            return snap.active === 'zh' ? DICT.zh.title : DICT.en.title
+          } catch (e) { /* fall through */ }
+        }
+        return t('title')
+      } },
       (props) => h(Dashboard, props),
     ))
     slots.inject('tool.view.cordis', () => slots.register(
