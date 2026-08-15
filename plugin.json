@@ -5,7 +5,7 @@
   "name": "Token 用量统计（Codex 风格）",
   "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
   "platforms": ["host", "client"],
-  "currentPackageId": "pkg-22",
+  "currentPackageId": "pkg-23",
   "packageHistory": [
     { "packageId": "pkg-9",  "note": "首版部署（plan §6 原码 + console.warn 修正）" },
     { "packageId": "pkg-10", "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用" },
@@ -20,7 +20,8 @@
     { "packageId": "pkg-19", "note": "v11（run-19）：月份标签带年份「2026年8月」；格子空隙 2→1px、尺寸上限 14→16px，宽度公式同步" },
     { "packageId": "pkg-20", "note": "v12（run-20）：悬停提示日期由「8月15日」改为「2026年8月15日」（年月日）" },
     { "packageId": "pkg-21", "note": "v13（run-21）：底部月份标签去掉年份恢复「8月」；新增「每周用量」53 列×7 格柱状条（自下而上填充、最大周全满、其余按比例整数格、统一颜色），与热力图同构对齐" },
-    { "packageId": "pkg-22", "note": "v14（run-22）：每周用量改为视图切换——热力图右上方「每日/每周」按钮；每周格子悬停显示周范围+周总用量气泡" }
+    { "packageId": "pkg-22", "note": "v14（run-22）：每周用量改为视图切换——热力图右上方「每日/每周」按钮；每周格子悬停显示周范围+周总用量气泡" },
+    { "packageId": "pkg-23", "note": "v15（run-23，host v4 + client v15）：Host 新增 request/header 模型归属（provider/model）+ 洞察聚合（总轮数/时长/输入输出缓存）+ models[] 排名；Client 热力图下方新增平行两栏「洞察」+「最喜欢的模型」（Top5 + 比例条）" }
   ],
   "files": {
     "host": "host.js",

@@ -408,3 +408,36 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - `node --check` 语法通过；
 - `tipText` / `weekTipText` 单测：每日「2026年8月15日消耗了 27.3 万 Token · 34 次请求」、
   每周「2026年8月9日 ~ 2026年8月15日 所在周消耗了 27.3 万 Token」✅
+
+---
+
+## 十六、v15 迭代（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-23` / `run-23`（**host v4 + client v15 同包**，cordis_define kind=existing + update 激活）；
+> `plugin.json` 已回填。这是首次 Host 代码变更（v1 起 host 未动）。
+
+### 用户反馈
+
+热力图下方新增平行排列的两个栏目：左侧「洞察」（有趣的小数据，如聊天总数等），
+右侧「最喜欢的模型」（供应商-模型 的 token 用量排名）。
+
+### Host v4 变更（host.js）
+
+| 项 | 实现 |
+| --- | --- |
+| 模型归属 | `assistant/message` 不带 model（实测确认），改折 `request/header` 的 `data.header.config.provider+model` 记录到会话（`rec.model`），后续 usage 归入 `modelStats`；unknown 桶不展示 |
+| 洞察聚合 | `buildPayload` 新增 `totalTurns`（turn/end 数）、`totalChatMs`、`totalInput`、`totalOutput`、`totalCacheRead`、`models[]`（provider/model 按 token 降序） |
+
+### Client v15 变更（client.js）
+
+- 热力图下方新增 `.tks-insights-row` 平行两栏：
+  - **洞察**：聊天总数（轮）、LLM 请求数、会话总数、活跃天数、缓存命中率（cacheRead/总消耗）、平均每轮 Token、平均每轮时长；
+  - **最喜欢的模型**：Top5 provider/model 排名（序号 + 名称省略号截断 + token 量 + 比例条，最大 100% 最小 2%），空数据显示「暂无模型数据」；
+- 两栏为带边框圆角面板，`flex:1` 等宽。
+
+### 验证（本机 node，端到端）
+
+- 用 11 个真实会话日志全量喂入新 host 折叠逻辑：totalTokens=123,248,990、totalRequests=734、
+  totalTurns=70、totalChatMs≈5h、缓存命中率 98%、无错误日志；
+- 模型排名归因正确：`deepseek-official/deepseek-v4-flash` 8816万 → `opencode-go/deepseek-v4-pro` 3221万
+  → `opencode-go/kimi-k3` 275万 → `opencode-go/deepseek-v4-flash` 11万 ✅

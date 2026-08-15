@@ -6,7 +6,12 @@
 //   - Host Service：sessionQuery（listSessions / readSession）
 //   - Host Event：  session/event（emit，(session, event)）、session/created（emit，(session)）
 //   - Host Builtin：harness（handle）
-// 版本：v3（对应运行中的 pkg-11；pkg-9 首版，pkg-10 修 ctx 作用域，pkg-11 修 styles 注入）
+// 版本：v4（随客户端 v15 一起部署 = pkg-23；v3 对应 pkg-11~22）
+// v4 变更：
+//   1. 新增 request/header 事件折叠：记录每会话最近一次 provider/model，供 usage 归属
+//   2. assistant/message 折叠时按模型累计 tokens/requests（modelStats）
+//   3. buildPayload 新增：totalTurns / totalChatMs / totalInput / totalOutput /
+//      totalCacheRead / models[]（provider/model 排名，token 降序，unknown 不展示）
 
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
 function dayKeyOf(time) {
@@ -29,8 +34,9 @@ return {
 
     // ---- 自有聚合状态（纯 JSON，不持有 live 对象）----
     const days = new Map()      // dayKey -> {input,output,cacheRead,cacheWrite,total,requests}
-    const sessions = new Map()  // sessionId -> {lastSeq,tokens,chatMs,turns,createdAt}
+    const sessions = new Map()  // sessionId -> {lastSeq,tokens,chatMs,turns,createdAt,model}
     const openTurns = new Map() // sessionId:turn -> startTime
+    const modelStats = new Map() // "provider/model" -> {tokens,requests}（request/header 归属）
     let disposed = false
     let ready = false
     let scanning = false
@@ -45,7 +51,7 @@ return {
     function sessionRec(id, createdAt) {
       let rec = sessions.get(id)
       if (!rec) {
-        rec = { lastSeq: -1, tokens: 0, chatMs: 0, turns: 0, createdAt: createdAt || 0 }
+        rec = { lastSeq: -1, tokens: 0, chatMs: 0, turns: 0, createdAt: createdAt || 0, model: null }
         sessions.set(id, rec)
       }
       return rec
@@ -80,7 +86,20 @@ return {
         totalTokens += t
         totalRequests += 1
         rec.tokens += t
+        // 模型归属：assistant/message 无 model 字段，用该会话最近一次 request/header 的 provider/model
+        const mk = rec.model || 'unknown'
+        let ms = modelStats.get(mk)
+        if (!ms) {
+          ms = { tokens: 0, requests: 0 }
+          modelStats.set(mk, ms)
+        }
+        ms.tokens += t
+        ms.requests += 1
         if (t > peakStepTokens) peakStepTokens = t
+      } else if (type === 'request/header') {
+        // 记录该会话当前使用的 provider/model（供后续 usage 归属）
+        const cfg = data.header && data.header.config
+        if (cfg && cfg.model) rec.model = (cfg.provider || '?') + '/' + cfg.model
       } else if (type === 'turn/start') {
         openTurns.set(sessionId + ':' + data.turn, event.time)
       } else if (type === 'turn/end') {
@@ -180,12 +199,39 @@ return {
         current += 1
         cursor = shiftDayKey(cursor, -1)
       }
+      // 洞察类聚合：总轮数 / 聊天总时长 / 输入·输出·缓存 Token
+      let totalTurns = 0
+      let totalChatMs = 0
+      for (const entry of sessions) {
+        totalTurns += entry[1].turns
+        totalChatMs += entry[1].chatMs
+      }
+      let totalInput = 0
+      let totalOutput = 0
+      let totalCacheRead = 0
+      for (const entry of days) {
+        totalInput += entry[1].input
+        totalOutput += entry[1].output
+        totalCacheRead += entry[1].cacheRead
+      }
+      // 模型排名（provider/model，按 token 降序；unknown 归并桶不展示）
+      const modelList = []
+      for (const entry of modelStats) {
+        if (entry[0] === 'unknown') continue
+        modelList.push({ key: entry[0], tokens: entry[1].tokens, requests: entry[1].requests })
+      }
+      modelList.sort((a, b) => b.tokens - a.tokens)
       return {
         ready: ready,
         scanning: scanning,
         scannedSessions: scannedSessions,
         totalTokens: totalTokens,
         totalRequests: totalRequests,
+        totalTurns: totalTurns,
+        totalChatMs: totalChatMs,
+        totalInput: totalInput,
+        totalOutput: totalOutput,
+        totalCacheRead: totalCacheRead,
         totalSessions: sessions.size,
         activeDays: dayList.length,
         peakDay: peakDay,
@@ -195,6 +241,7 @@ return {
         longestChatSessionId: longestChatSessionId,
         streakCurrent: current,
         streakLongest: longest,
+        models: modelList,
         days: dayList,
       }
     }

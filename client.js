@@ -6,11 +6,11 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v14（部署中；v13 = pkg-21）
-// v14 变更（仅 client.js）：
-//   1. 「每周用量」改为视图切换：热力图右上方新增「每日 / 每周」按钮，
-//      每周视图显示 53 列 × 7 格柱状条（自下而上填充、最大周全满、按比例整数格）
-//   2. 每周格子悬停同样显示自定义气泡（周范围 + 周总用量），与每日视图一致的交互
+// 版本：v15（部署中；v14 = pkg-22）
+// v15 变更（host.js 同步升级为 v4 随包部署）：
+//   1. 热力图下方新增平行两栏：「洞察」（聊天总数/LLM 请求数/会话数/活跃天数/缓存命中率/
+//      平均每轮 Token/平均每轮时长）与「最喜欢的模型」（provider/model 用量排名 Top5 + 比例条）
+//   2. 数据来自 host 新增的 request/header 模型归属与洞察聚合（见 host.js v4）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -286,7 +286,10 @@ function Dashboard(props) {
             className: 'tks-tab' + (view === 'weekly' ? ' active' : ''),
             onClick: () => setView('weekly'),
           }, '每周'))),
-      h(Heatmap, { days: data.days, view: view })))
+      h(Heatmap, { days: data.days, view: view }),
+      h('div', { className: 'tks-insights-row' },
+        h(Insights, { data: data }),
+        h(ModelRanking, { data: data }))))
 }
 
 function RunCard() {
@@ -302,6 +305,49 @@ function RunCard() {
     ' · 今日连续 ' + data.streakCurrent + ' 天' +
     ' · 峰值日 ' + (data.peakDay ? fmtTokens(data.peakDay.total) : '0'),
     h('div', { className: 'tks-card-sub' }, '完整图表见「设置 → Token 用量」'))
+}
+
+// 洞察：一组有趣的小数据
+function Insights(props) {
+  const d = props.data
+  const hit = d.totalTokens > 0 ? Math.round(100 * d.totalCacheRead / d.totalTokens) : 0
+  const perTurnTokens = d.totalTurns > 0 ? fmtTokens(Math.round(d.totalTokens / d.totalTurns)) : '0'
+  const perTurnMs = d.totalTurns > 0 ? Math.round(d.totalChatMs / d.totalTurns) : 0
+  const rows = [
+    ['聊天总数', d.totalTurns + ' 轮'],
+    ['LLM 请求数', d.totalRequests + ' 次'],
+    ['会话总数', d.totalSessions + ' 个'],
+    ['活跃天数', d.activeDays + ' 天'],
+    ['缓存命中率', hit + ' %'],
+    ['平均每轮 Token', perTurnTokens],
+    ['平均每轮时长', fmtDuration(perTurnMs)],
+  ]
+  return h('div', { className: 'tks-insight-panel' },
+    h('div', { className: 'tks-insight-title' }, '洞察'),
+    h('div', { className: 'tks-insight-list' },
+      rows.map((r, i) => h('div', { key: i, className: 'tks-insight-row' },
+        h('span', { className: 'tks-insight-label' }, r[0]),
+        h('span', { className: 'tks-insight-value' }, r[1])))))
+}
+
+// 最喜欢的模型：provider/model 的 token 用量排名（Top5 + 比例条）
+function ModelRanking(props) {
+  const models = (props.data.models || []).slice(0, 5)
+  const max = models.length ? models[0].tokens : 0
+  return h('div', { className: 'tks-insight-panel' },
+    h('div', { className: 'tks-insight-title' }, '最喜欢的模型'),
+    models.length === 0
+      ? h('div', { className: 'tks-insight-empty' }, '暂无模型数据')
+      : h('div', { className: 'tks-model-list' },
+        models.map((m, i) => h('div', { key: m.key, className: 'tks-model-row' },
+          h('div', { className: 'tks-model-top' },
+            h('span', { className: 'tks-model-name' }, (i + 1) + '. ' + m.key),
+            h('span', { className: 'tks-model-val' }, fmtTokens(m.tokens))),
+          h('div', { className: 'tks-model-bar-wrap' },
+            h('div', {
+              className: 'tks-model-bar',
+              style: { width: (max > 0 ? Math.max(2, Math.round(100 * m.tokens / max)) : 0) + '%' },
+            }))))))
 }
 
 const CSS = [
@@ -349,6 +395,22 @@ const CSS = [
   // 每周视图：与热力图同构对齐（53 列，pitch 一致），自下而上填充
   '.tks-weekly{display:flex;gap:1px}',
   '.tks-week-full{background:#e5764c}',
+  // 洞察 + 最喜欢的模型：平行两栏
+  '.tks-insights-row{display:flex;gap:16px;margin-top:20px}',
+  '.tks-insight-panel{flex:1;min-width:0;border:1px solid rgba(128,128,128,.2);border-radius:8px;padding:12px 14px}',
+  '.tks-insight-title{font-size:13px;font-weight:600;margin-bottom:10px}',
+  '.tks-insight-list{display:flex;flex-direction:column;gap:7px}',
+  '.tks-insight-row{display:flex;justify-content:space-between;font-size:12px}',
+  '.tks-insight-label{opacity:.6}',
+  '.tks-insight-value{font-weight:600}',
+  '.tks-insight-empty{font-size:12px;opacity:.5}',
+  '.tks-model-list{display:flex;flex-direction:column;gap:10px}',
+  '.tks-model-row{display:flex;flex-direction:column;gap:4px}',
+  '.tks-model-top{display:flex;justify-content:space-between;font-size:12px;gap:8px}',
+  '.tks-model-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.tks-model-val{font-weight:600;flex-shrink:0}',
+  '.tks-model-bar-wrap{height:6px;border-radius:3px;background:rgba(128,128,128,.15);overflow:hidden}',
+  '.tks-model-bar{height:100%;border-radius:3px;background:#e5764c}',
   '.tks-legend{display:flex;align-items:center;gap:2px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',
 ].join('\n')
