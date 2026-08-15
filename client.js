@@ -6,7 +6,13 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v3（对应运行中的 pkg-11）
+// 版本：v4（待部署；v3 对应运行中的 pkg-11）
+// v4 变更：
+//   1. 热力图方块悬停显示自定义提示：「x月x日消耗了 xx Token · N 次请求」
+//   2. 移除「每周 / 累计」两个 tab，只保留每日视图
+//   3. 热力图改为按日历年分页（一页一年）；前一年无记录时不显示「前一年」入口
+//   4. 统计卡数值自适应缩小字号，保证一行内显示（5938.2 万 / 2 小时 1 分不换行）
+//   5. 各统计卡的标签行（累计 Token 数等）统一高度对齐
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -42,51 +48,59 @@ function cellLevel(v, max) {
   if (r >= 0.18) return 2
   return 1
 }
-// 组装 53 列 × 7 行网格（列=周，周日在上）
-function buildGrid(days, mode) {
+// 悬停提示文案：「8月15日消耗了 27.3 万 Token · 34 次请求」
+function tipText(cell) {
+  const m = parseInt(cell.date.slice(5, 7), 10)
+  const d = parseInt(cell.date.slice(8, 10), 10)
+  const head = m + '月' + d + '日'
+  return cell.total > 0
+    ? head + '消耗了 ' + fmtTokens(cell.total) + ' Token · ' + cell.requests + ' 次请求'
+    : head + '没有 Token 消耗'
+}
+// 组装某一日历年的网格（列=周，周日在上；本年截到今天，越界/未来格隐藏）
+function buildGrid(days, year) {
   const map = new Map()
   for (const d of days) map.set(d.date, d)
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  const anchor = new Date(today); anchor.setDate(anchor.getDate() - 364)
-  const start = new Date(anchor); start.setDate(start.getDate() - start.getDay())
+  const thisYear = today.getFullYear()
+  const end = year === thisYear ? today : new Date(year, 11, 31)
+  const start = new Date(year, 0, 1)
+  start.setDate(start.getDate() - start.getDay()) // 对齐到本周周日
   const weeks = []
   const cursor = new Date(start)
-  let cum = 0
-  while (cursor.getTime() <= today.getTime()) {
+  let max = 0
+  while (cursor.getTime() <= end.getTime()) {
     const week = []
-    let weekTotal = 0
     for (let i = 0; i < 7; i += 1) {
       const key = dayKeyOf(cursor.getTime())
       const day = map.get(key)
       const total = day ? day.total : 0
-      cum += total
-      weekTotal += total
+      const inYear = cursor.getFullYear() === year
+      const future = cursor.getTime() > today.getTime()
       week.push({
         date: key,
         total: total,
         requests: day ? day.requests : 0,
-        cum: cum,
-        future: cursor.getTime() > today.getTime(),
+        hidden: !inYear || future,
       })
+      if (inYear && !future && total > max) max = total
       cursor.setDate(cursor.getDate() + 1)
     }
-    weeks.push({ cells: week, weekTotal: weekTotal })
+    weeks.push(week)
   }
-  // 每月标签：该列首日与前一列首日月份不同则标记
+  // 每月标签：取该列首个可见格，与前一列月份不同则标记
   const monthLabels = []
   let prevMonth = -1
   for (const w of weeks) {
-    const m = new Date(w.cells[0].date + 'T00:00:00').getMonth()
-    monthLabels.push(m !== prevMonth ? (m + 1) + '月' : '')
-    prevMonth = m
-  }
-  // 当前模式下的最大值（色阶基准）
-  let max = 0
-  for (const w of weeks) {
-    for (const c of w.cells) {
-      const v = mode === 'weekly' ? w.weekTotal : mode === 'cumulative' ? c.cum : c.total
-      if (v > max) max = v
+    let label = ''
+    for (const c of w) {
+      if (!c.hidden) {
+        const m = parseInt(c.date.slice(5, 7), 10)
+        if (m !== prevMonth) { label = m + '月'; prevMonth = m }
+        break
+      }
     }
+    monthLabels.push(label)
   }
   return { weeks: weeks, monthLabels: monthLabels, max: max }
 }
@@ -97,29 +111,55 @@ function startInterval(callback, delay) {
   return intervalRef ? intervalRef(callback, delay) : null
 }
 
+// 自适应单行数值：测得溢出时按比例缩小字号（22px 起，最低 12px）
+// 不经过 React state，直接改内联样式，避免测量-渲染循环；
+// ResizeObserver 存在时跟随卡片宽度变化实时调整（不存在时随重渲染/文本变化重测）。
+function FitValue(props) {
+  const ref = React.useRef(null)
+  React.useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return undefined
+    const fit = () => {
+      el.style.fontSize = '22px'
+      const avail = el.clientWidth
+      const need = el.scrollWidth
+      if (need > avail && need > 0) {
+        el.style.fontSize = Math.max(12, Math.floor(22 * avail / need)) + 'px'
+      }
+    }
+    fit()
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(fit)
+      ro.observe(el)
+      return () => ro.disconnect()
+    }
+    return undefined
+  }, [props.text])
+  return h('div', { ref: ref, className: 'tks-card-value' }, props.text)
+}
+
 function StatCard(props) {
   return h('div', { className: 'tks-card' },
-    h('div', { className: 'tks-card-value' }, props.value),
+    h(FitValue, { text: props.value }),
     h('div', { className: 'tks-card-label' }, props.label),
     props.sub ? h('div', { className: 'tks-card-sub' }, props.sub) : null)
 }
 
 function Heatmap(props) {
-  const g = buildGrid(props.days, props.mode)
-  const columns = g.weeks.map((w, wi) =>
+  const g = buildGrid(props.days, props.year)
+  const colCount = g.weeks.length
+  const columns = g.weeks.map((week, wi) =>
     h('div', { key: wi, className: 'tks-col' },
-      w.cells.map((c, ci) => {
-        const v = props.mode === 'weekly' ? w.weekTotal
-          : props.mode === 'cumulative' ? c.cum : c.total
-        const tip = props.mode === 'weekly'
-          ? c.date + ' 所在周 · ' + fmtTokens(w.weekTotal) + ' Token'
-          : c.date + ' · ' + fmtTokens(v) + ' Token · ' + c.requests + ' 次请求'
+      week.map((c, ci) => {
+        // 靠左/右边缘的列，提示框改为贴边对齐，避免被滚动容器裁掉
+        let edge = ''
+        if (wi < 8) edge = ' tks-tip-left'
+        else if (wi >= colCount - 2) edge = ' tks-tip-right'
         return h('div', {
           key: ci,
-          className: 'tks-cell tks-lv' + (c.future ? 0 : cellLevel(v, g.max)),
-          style: c.future ? { visibility: 'hidden' } : undefined,
-          title: tip,
-        })
+          className: 'tks-cell tks-lv' + (c.hidden ? 0 : cellLevel(c.total, g.max)) + edge,
+          style: c.hidden ? { visibility: 'hidden' } : undefined,
+        }, c.hidden ? null : h('span', { className: 'tks-tip' }, tipText(c)))
       })))
   return h('div', { className: 'tks-heatmap-wrap' },
     h('div', { className: 'tks-heatmap' }, columns),
@@ -138,8 +178,8 @@ function Dashboard(props) {
   const data = st[0]; const setData = st[1]
   const errSt = React.useState(null)
   const error = errSt[0]; const setError = errSt[1]
-  const tabSt = React.useState('daily')
-  const mode = tabSt[0]; const setMode = tabSt[1]
+  const yearSt = React.useState((new Date()).getFullYear())
+  const year = yearSt[0]; const setYear = yearSt[1]
   const load = function () {
     host.call('get-stats').then(setData, (e) => setError(String(e)))
   }
@@ -150,7 +190,11 @@ function Dashboard(props) {
   }, [])
   if (error) return h('div', { className: 'tks-root' }, '加载失败：', error)
   if (!data) return h('div', { className: 'tks-root' }, '加载中…')
-  const tabs = [['daily', '每日'], ['weekly', '每周'], ['cumulative', '累计']]
+  // 分页：前一年有记录才可往前翻；最多翻到本年
+  const thisYear = (new Date()).getFullYear()
+  const earliest = data.days.length ? data.days[0].date : null
+  const hasPrev = earliest !== null && earliest < year + '-01-01'
+  const hasNext = year < thisYear
   return h('div', { className: 'tks-root' },
     h('div', { className: 'tks-header' },
       h('div', null,
@@ -180,13 +224,15 @@ function Dashboard(props) {
     h('div', { className: 'tks-activity' },
       h('div', { className: 'tks-activity-head' },
         h('span', { className: 'tks-activity-title' }, 'Token 活动'),
-        h('span', { className: 'tks-tabs' },
-          tabs.map((t) => h('button', {
-            key: t[0],
-            className: 'tks-tab' + (mode === t[0] ? ' active' : ''),
-            onClick: () => setMode(t[0]),
-          }, t[1])))),
-      h(Heatmap, { days: data.days, mode: mode })))
+        h('span', { className: 'tks-pager' },
+          hasPrev
+            ? h('button', { className: 'tks-page-btn', onClick: () => setYear(year - 1) }, '‹ 前一年')
+            : null,
+          h('span', { className: 'tks-page-year' }, year + ' 年'),
+          hasNext
+            ? h('button', { className: 'tks-page-btn', onClick: () => setYear(year + 1) }, '后一年 ›')
+            : null)),
+      h(Heatmap, { days: data.days, year: year })))
 }
 
 function RunCard() {
@@ -211,24 +257,33 @@ const CSS = [
   '.tks-subtitle{font-size:12px;opacity:.6;margin-top:4px}',
   '.tks-btn{font-size:12px;padding:4px 12px;border:1px solid rgba(128,128,128,.4);border-radius:6px;background:transparent;cursor:pointer;color:inherit}',
   '.tks-cards{display:flex;border:1px solid rgba(128,128,128,.25);border-radius:10px;overflow:hidden;margin-bottom:24px}',
-  '.tks-card{flex:1;padding:16px 12px;text-align:center}',
+  '.tks-card{flex:1;display:flex;flex-direction:column;align-items:center;padding:16px 8px 12px;text-align:center;min-width:0}',
   '.tks-card+.tks-card{border-left:1px solid rgba(128,128,128,.2)}',
-  '.tks-card-value{font-size:22px;font-weight:600}',
+  // 数值：nowrap + 定高 30px，字号由 FitValue 自适应收缩；定高保证各卡标签同一高度
+  '.tks-card-value{width:100%;height:30px;line-height:30px;font-size:22px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
   '.tks-card-label{font-size:12px;opacity:.6;margin-top:6px}',
   '.tks-card-sub{font-size:11px;opacity:.45;margin-top:4px}',
   '.tks-activity-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}',
   '.tks-activity-title{font-size:15px;font-weight:600}',
-  '.tks-tab{border:none;background:none;font-size:13px;padding:4px 8px;cursor:pointer;opacity:.5;color:inherit}',
-  '.tks-tab.active{opacity:1;font-weight:600;border-bottom:2px solid currentColor}',
-  '.tks-heatmap-wrap{overflow-x:auto;padding-bottom:8px}',
+  '.tks-pager{display:flex;align-items:center;gap:8px}',
+  '.tks-page-btn{border:1px solid rgba(128,128,128,.4);border-radius:6px;background:transparent;font-size:12px;padding:2px 8px;cursor:pointer;color:inherit;opacity:.75}',
+  '.tks-page-btn:hover{opacity:1}',
+  '.tks-page-year{font-size:13px;opacity:.75;min-width:44px;text-align:center}',
+  // 顶部留白给首行方块的悬停提示（容器 overflow-x:auto 会同时裁剪纵向溢出）
+  '.tks-heatmap-wrap{overflow-x:auto;padding:32px 2px 8px}',
   '.tks-heatmap{display:flex;gap:3px}',
   '.tks-col{display:flex;flex-direction:column;gap:3px}',
-  '.tks-cell{width:10px;height:10px;border-radius:2px;display:inline-block}',
+  '.tks-cell{width:10px;height:10px;border-radius:2px;display:inline-block;position:relative}',
   '.tks-lv0{background:rgba(128,128,128,.14)}',
   '.tks-lv1{background:#f6c9b3}',
   '.tks-lv2{background:#ef9f7d}',
   '.tks-lv3{background:#e5764c}',
   '.tks-lv4{background:#c74e24}',
+  // 自定义悬停提示：纯 CSS 跟随 :hover，不依赖 window/document
+  '.tks-tip{display:none;position:absolute;bottom:15px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(32,32,32,.94);color:#fafafa;font-size:11px;line-height:1.5;padding:3px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}',
+  '.tks-cell:hover .tks-tip{display:block}',
+  '.tks-tip-left .tks-tip{left:-3px;transform:none}',
+  '.tks-tip-right .tks-tip{left:auto;right:-3px;transform:none}',
   '.tks-months{display:flex;gap:3px;margin-top:6px;font-size:10px;opacity:.55}',
   '.tks-months span{width:13px;overflow:visible;white-space:nowrap}',
   '.tks-legend{display:flex;align-items:center;gap:3px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',

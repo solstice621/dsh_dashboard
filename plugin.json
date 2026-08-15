@@ -9,7 +9,8 @@
   "packageHistory": [
     { "packageId": "pkg-9",  "note": "首版部署（plan §6 原码 + console.warn 修正）" },
     { "packageId": "pkg-10", "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用" },
-    { "packageId": "pkg-11", "note": "修复样式丢失：styles 是 Builtin 非 ctx Service，改为直接 styles.insert(CSS)" }
+    { "packageId": "pkg-11", "note": "修复样式丢失：styles 是 Builtin 非 ctx Service，改为直接 styles.insert(CSS)" },
+    { "packageId": "待部署（预计 pkg-12）", "note": "v4（仅 client.js 变更）：热力图悬停提示「x月x日消耗了…」、移除每周/累计 tab 改为按日历年分页（前一年无记录不显示入口）、统计卡数值自适应单行、各卡标签同高。web 会话 cordis_define kind=existing 后回填正式 packageId" }
   ],
   "files": {
     "host": "host.js",

@@ -1,6 +1,6 @@
 # Token 用量统计插件 — 目标与进度记录
 
-> 记录时间：2026-08-15 21:25 CST（首次）；2026-08-15 深夜（部署完成更新）
+> 记录时间：2026-08-15 21:25 CST（首次）；2026-08-15 深夜（部署完成更新）；2026-08-15（v4 源码迭代，见第五节）
 > 关联文档：`~/token-stats-plugin-plan.md`（完整策划 + 可部署代码）
 > 状态：**已部署并运行中** ✅（见下方「部署记录」）；源码已归档至 git 仓库 `~/dsh-dashboard`（main @ 64a88fc，远程 `git@github.com:solstice621/dsh_dashboard.git`）
 
@@ -110,3 +110,40 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 3. 不再需要时 `cordis_stop` 或 `cordis_undefine` 移除。
 
 **部署后期望效果**：Run 卡片出现紧凑摘要；设置页新增「Token 用量」分区，内含 5 统计卡 + 每日/每周/累计热力图；首次打开后台扫描全部历史会话（秒级~几十秒），之后实时更新。
+
+---
+
+## 五、v4 迭代（2026-08-15，源码已完成，待 web 会话部署）
+
+### 用户反馈（基于运行中的 pkg-11 截图）
+
+1. 热力图方块悬停时应显示当天消耗：「x月x日消耗了 …」；
+2. 「每周 / 累计」tab 看不出意义，去掉；
+3. 热力图做成分页，一页约一年的量；前一年没有记录则不显示前一年入口；
+4. 统计卡数值（xxxx 万 / x 小时 x 分）应自适应在一行以内（截图中「5938.2 万」
+   「2 小时 1 分」均换行）；各卡的标签（累计 Token 数等栏目）要在同一高度。
+
+### 改动（仅 `client.js`，`host.js` 不变，无新依赖）
+
+| 需求 | 实现 |
+| --- | --- |
+| 悬停提示 | 每格内嵌 `<span class="tks-tip">`，纯 CSS `:hover` 显示（不依赖 window/document）；文案「8月15日消耗了 27.3 万 Token · 464 次请求」，无消耗日「8月13日没有 Token 消耗」；容器 `overflow-x:auto` 会裁剪溢出 → 顶部 padding 32px 留位 + 左 8 列/右 2 列提示框贴边对齐；替代原 `title` 属性 |
+| 移除 tab | 删除每日/每周/累计三 tab 与 mode 状态，`buildGrid` 不再计算周合计/累计；仅每日视图 |
+| 按年分页 | `buildGrid(days, year)` 改为日历年网格：本年页 = 1月1日所在周→今天，往年页 = 完整一年；跨年/未来格 `visibility:hidden`；标题右侧「‹ 前一年 / N 年 / 后一年 ›」；`hasPrev = 最早记录日期 < year-01-01`（无则不显示前一年入口），`hasNext = year < 本年` |
+| 数值单行 | 新组件 `FitValue`：`useLayoutEffect` 中先复位 22px 再测 `scrollWidth/clientWidth`，溢出则按比例缩字号（最低 12px）；直接改内联样式不经 React state，无测量-渲染循环；`typeof ResizeObserver` 守卫存在时跟随卡片宽度实时调整 |
+| 标签同高 | 卡片改 flex 列布局，数值行 `nowrap` + 固定高 30px（line-height 30px），标签 margin-top 6px 固定 → 各卡标签 y 坐标一致 |
+
+### 验证（本机 node 已跑）
+
+- `new Function` 解析 client.js / host.js：语法 OK；
+- `buildGrid` 单测：2026 页 33 列（1月→8月，标签 1月…8月）、2025 页 53 列（标签 1月…12月）、跨年格隐藏正确、max 只取页内可见格；
+- `tipText` 有/无消耗两种文案正确。
+
+### 部署步骤（web profile 会话，cordis_* 工具）
+
+1. `cordis_inspect_self(pluginId='toksta-5')` 确认当前运行 pkg-11；
+2. `cordis_define`：`plugin.kind='existing'`、`pluginId='toksta-5'`，
+   `code.host` = 本仓库 `host.js`（未变，保持两半区同包），`code.client` = 本仓库 `client.js`；
+3. `cordis_run` mode=`update` 升级；用户批准后生效；
+4. 回填 `plugin.json` 的正式 packageId；
+5. 验收：见 `README.md` 验收清单（新增悬停提示、年分页、数值单行、标签同高 4 项）。
