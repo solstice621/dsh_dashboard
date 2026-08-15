@@ -746,3 +746,27 @@ dsh 服务停止/重启后不要全量扫盘重建；删除会话记录后，已
 
 - 动态插件版快照路径为绝对路径（fs 不展开 `~`）；bundle 版用 `process.env.HOME` 拼接，通用。
 - 删除会话的统计保留是快照的固有行为；若需要「删除后同步清掉该会话统计」，手动删快照重启或调 rescan 即可。
+
+---
+
+## 二十八、上架 dsh 插件商店（2026-08-16）✅ marketplace 已收录 + awesome PR 已提交
+
+### dsh-plugin-marketplace（自动收录，无需 PR）
+
+- 市场仓库：https://github.com/YELEBAI/dsh-plugin-marketplace ——「只有扫描器验证并写入中心 Registry 的插件才进入市场」；
+- 扫描器每 2 小时扫 `topic:dsh-plugin`，自动验证 manifest / bundle patch / 入口 / README；
+- **已确认收录**（上一轮 16:42:59 扫描）：`registry/state.json` 中
+  `solstice621/dsh_dashboard` = `verified`，`registry/plugins.json` 已有条目：
+  - 一键安装：`github:solstice621/dsh_dashboard#3553ffdb64cd3c11427b582a92f5ab6b3adc81a7`（锁定 commit，不会漂移）
+  - profiles: web；requiresBuildApproval: false（无生命周期脚本）；hasClient: true；
+  - inspection：host=lib/index.js、client=lib/client.js 均找到，runtimeArtifactsCommitted ✅
+- **v26（8289186）下轮扫描自动更新锁定 commit**：自查大小全部低于上限
+  （package.json 961B / cordis.patch.yml 317B / README.md 5.7KB，上限 256KB/64KB/256KB），
+  manifest 结构未变 → 继续 verified。
+
+### awesome-deepseek-harness（手策列表，PR 流程）
+
+- 仓库：https://github.com/0xsline/awesome-deepseek-harness（contributing.md：README.md + README.zh-CN.md 双语同 PR）；
+- 分支 `add-dsh-dashboard`（81b718b，UI & Experience 分类、dsh-usage-panel 之后各 +1 行）已推送到
+  solstice621 的 fork；
+- PR 链接（用户点击创建）：https://github.com/0xsline/awesome-deepseek-harness/compare/main...solstice621:add-dsh-dashboard?expand=1

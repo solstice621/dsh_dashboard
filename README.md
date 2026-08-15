@@ -91,10 +91,10 @@ handy for iterating without restarting the profile):
 
 ## 🌐 Ecosystem
 
-- Repo carries the `dsh-plugin` topic, auto-discoverable by
-  [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) and
-  [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace);
-- TODO: awesome-dsh-plugin listing PR, marketplace registry validation.
+- ✅ Listed in [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace): scanner-verified
+  (`verified`, one-click install pinned to `github:solstice621/dsh_dashboard#<commit>`, auto-refreshed every 2h);
+- 🚀 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) listing PR submitted:
+  `docs: add dsh-dashboard` (UI & Experience, bilingual entry).
 
 ## 📄 License
 

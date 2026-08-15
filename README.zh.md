@@ -91,9 +91,10 @@ dsh --profile web   # 重启后生效
 
 ## 🌐 生态
 
-- 已打 `dsh-plugin` 等 Topics，可被 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness)
-  与 [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace) 自动发现；
-- 待办：awesome-dsh-plugin 收录 PR、市场 Registry 验证。
+- ✅ [dsh-plugin-marketplace](https://github.com/YELEBAI/dsh-plugin-marketplace) 已自动收录：
+  扫描验证 `verified`、一键安装（`github:solstice621/dsh_dashboard#<commit>`）、每 2 小时自动更新锁定 commit；
+- 🚀 [awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) 收录 PR 已提交：
+  `docs: add dsh-dashboard`（UI & Experience 分类，中英双语条目）。
 
 ## 📄 License
 
