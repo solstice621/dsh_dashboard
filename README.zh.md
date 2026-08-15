@@ -23,6 +23,20 @@ Codex 个人主页风格的 Token 用量统计仪表盘：5 统计卡 + GitHub �
   `turn/start`/`turn/end` 时长），实时增量更新；快照持久化 + 增量同步，重启后快速恢复
 - **i18n**：跟随 DSH 语言（`locale.getLocale().active`），zh → 中文 / 其他 → 英文，切换即时生效
 
+## 🏗️ 架构说明
+
+插件有两种运行形态，共用同一套聚合逻辑：
+
+- **Bundle 形态**（推荐给最终用户）：通过 `dsh plugin add` 安装；npm 包内含 `lib/index.js`（Host 半）和 `lib/client.js`（Client 半）。Host 通过 webServer 注册 `GET /api/token-stats` 与 `POST /api/token-stats/rescan`；Client 注册「设置 → 统计」页面并从 API 拉取数据。
+- **动态插件形态**（维护者迭代用）：将 `host.js` / `client.js` 粘贴到 `cordis_define`，可在不重启 profile 的情况下会话内部署。
+
+数据流：
+
+1. Host 订阅 `session/event` / `session/created`，并先对历史会话日志做一次回补。
+2. 将 `assistant/message.usage`、`request/header` 模型归属、`turn/start`/`turn/end` 时长折叠为内存聚合。
+3. 聚合结果周期性写入 `~/.dsh/storages/token-stats/snapshot.json`；重启时先加载快照，再只增量折叠新事件。
+4. Client 轮询 `GET /api/token-stats`（扫描期 2s，就绪后 30s）并渲染仪表盘。
+
 ## 🚀 安装（bundle 方式，推荐）
 
 ```sh

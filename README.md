@@ -21,6 +21,20 @@ The UI follows the DSH language setting: Chinese interface → Chinese dashboard
 - **Favorite models**: provider/model token ranking (Top 5) with ratio bars
 - **Data source**: session logs (`assistant/message` usage + `request/header` model attribution + `turn/start`/`turn/end` durations), live incremental updates, persisted snapshot + incremental sync for fast restarts
 
+## 🏗️ Architecture
+
+The plugin has two runnable forms that share the same aggregation logic:
+
+- **Bundle form** (recommended for end users): installed via `dsh plugin add`; the npm package contains `lib/index.js` (host half) and `lib/client.js` (client half). The host half registers `GET /api/token-stats` and `POST /api/token-stats/rescan` through the web server; the client half registers a "Settings → Stats" section and fetches the API.
+- **Dynamic-plugin form** (for maintainers/iteration): `host.js` and `client.js` are pasted into `cordis_define` for in-session deployment without restarting the profile.
+
+Data flow:
+
+1. Host subscribes to `session/event` / `session/created` and also performs an initial backfill over historical session logs.
+2. It folds `assistant/message.usage`, `request/header` model attribution, and `turn/start`/`turn/end` durations into in-memory aggregates.
+3. Aggregates are periodically flushed to `~/.dsh/storages/token-stats/snapshot.json`; on restart the snapshot is loaded first, then only new events are incrementally folded.
+4. The client polls `GET /api/token-stats` (2s while scanning, 30s after ready) and renders the dashboard.
+
 ## 🚀 Install (bundle)
 
 ```sh
