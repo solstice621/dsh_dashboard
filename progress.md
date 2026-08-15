@@ -113,7 +113,13 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 
 ---
 
-## 五、v4 迭代（2026-08-15，源码已完成，待 web 会话部署）
+## 五、v4 迭代（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-12` / `run-12`（本 web 会话 cordis_define kind=existing + update 激活）。
+> 运行确认：Host/Client 均 running、无诊断错误；`plugin.json` 已回填 `currentPackageId: pkg-12`。
+> 部署前唯一风险点已排除：`FitValue` 使用 `React.useRef/useLayoutEffect`，已查 runner 源码
+> （dsh-cordis-client-runner 第 170 行 `closure(react, …)`，`require("react")` 全量传入）确认可用。
+
 
 ### 用户反馈（基于运行中的 pkg-11 截图）
 
