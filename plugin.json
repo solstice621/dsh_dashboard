@@ -14,7 +14,7 @@
     "host",
     "client"
   ],
-  "currentPackageId": "pkg-35",
+  "currentPackageId": "pkg-37",
   "packageHistory": [
     {
       "packageId": "pkg-9",
@@ -115,6 +115,10 @@
     {
       "packageId": "pkg-35",
       "note": "v25（run-35，仅 client.js）：按用户偏好，色阶由混合刻度改为纯线性 6 档（r = v/max，每档宽度 0.2），颜色深浅与消耗量完全按比例对应"
+    },
+    {
+      "packageId": "pkg-37",
+      "note": "v26（run-37，host v7 + client v25）：持久化快照 + 增量同步——聚合状态周期落盘 ~/.dsh/storages/token-stats/snapshot.json（10s flush + 卸载 flush）；启动优先加载快照（立即出数），sessionPersistence.readFrom(lastSeq+1) 增量折叠不扫盘不重建；删除会话保留历史统计（rescan 仍可全量重建）；无快照/损坏/版本不符回退 v6 全量 backfill。已实测：损坏快照回退重建 ✅、快照加载重启总量只增不减 ✅"
     }
   ],
   "files": {
