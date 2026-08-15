@@ -457,3 +457,21 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - 移除 Heatmap 渲染中的图例元素（`少 + lv0..lv4 + 多`）；
 - 移除 `.tks-legend` CSS 规则；`grep` 确认 `tks-legend` 零残留；
 - `node --check` 语法通过。
+
+---
+
+## 十八、v17 迭代（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-25` / `run-25`（cordis_define kind=existing + update 激活）；`plugin.json` 已回填。
+
+### 用户反馈（针对 v16）
+
+右上角「重新扫描」按钮是否有必要？
+
+### 结论与改动（仅 `client.js`）
+
+- **结论**：日常不需要。数据有三重保障：① `session/event` 实时折叠（新对话即时入账）；
+  ② 30s 自动刷新（纯内存组装）；③ 启动回补 + `session/created` 补折。rescan 仅对
+  「日志被外部工具改动/重放导致水位线漏折」的罕见场景有意义。
+- **改动**：删除右上角「重新扫描」按钮及 `.tks-btn` CSS（修复了删除时误删闭合括号的问题）；
+  Host 的 `rescan` RPC **保留**备用（排查时仍可调用）。

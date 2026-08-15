@@ -6,9 +6,10 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v16（部署中；v15 = pkg-23）
-// v16 变更（仅 client.js）：
-//   删除热力图下方的「少 □□□□□ 多」颜色图例（含 CSS 规则）
+// 版本：v17（部署中；v16 = pkg-24）
+// v17 变更（仅 client.js）：
+//   删除右上角「重新扫描」按钮（数据已由 session/event 实时折叠 + 30s 自动刷新保障，
+//   rescan 仅对日志被外部改动的罕见场景有意义；Host 的 rescan RPC 保留备用）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -245,11 +246,7 @@ function Dashboard(props) {
         h('div', { className: 'tks-subtitle' },
           data.scanning
             ? '正在扫描历史会话（' + data.scannedSessions + '/' + data.totalSessions + '）…'
-            : '共 ' + data.totalSessions + ' 个会话 · ' + data.totalRequests + ' 次请求 · ' + data.activeDays + ' 个活跃日')),
-      h('button', {
-        className: 'tks-btn',
-        onClick: () => host.call('rescan').then(setData),
-      }, '重新扫描')),
+            : '共 ' + data.totalSessions + ' 个会话 · ' + data.totalRequests + ' 次请求 · ' + data.activeDays + ' 个活跃日'))),
     h('div', { className: 'tks-cards' },
       h(StatCard, { value: fmtTokens(data.totalTokens), label: '累计 Token 数' }),
       h(StatCard, {
@@ -345,7 +342,6 @@ const CSS = [
   '.tks-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}',
   '.tks-title{font-size:20px;font-weight:600}',
   '.tks-subtitle{font-size:12px;opacity:.6;margin-top:4px}',
-  '.tks-btn{font-size:12px;padding:4px 12px;border:1px solid rgba(128,128,128,.4);border-radius:6px;background:transparent;cursor:pointer;color:inherit}',
   '.tks-cards{display:flex;border:1px solid rgba(128,128,128,.25);border-radius:10px;overflow:hidden;margin-bottom:24px}',
   '.tks-card{flex:1;display:flex;flex-direction:column;align-items:center;padding:16px 8px 12px;text-align:center;min-width:0}',
   '.tks-card+.tks-card{border-left:1px solid rgba(128,128,128,.2)}',
