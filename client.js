@@ -6,12 +6,12 @@
 //   - Client Service：timer（inject: ['timer']，组件内经模块级桥调用 ctx.interval）
 //   - Client Slot：settings.section（list/root，注册 {id, order, label}）、
 //     tool.view.cordis（keyed，key 只能是 'self'）
-// 版本：v5（部署中；v4 = pkg-12）
-// v5 变更：
-//   1. 热力图改为「今天右下角锚定」的滚动视图：53 列 × 7 天，最后一列以今天结尾
-//      （今天 = 最右下角格），向左每列再推 7 天，最左约一年前；
-//      不再从 1 月 1 日开始、不再按年分页（移除 pager 与 year 状态）
-//   2. 其余（悬停提示 / 仅每日视图 / FitValue / 标签同高）不变
+// 版本：v6（部署中；v5 = pkg-13）
+// v6 变更：
+//   1. 月份标签改为锚定「包含该月 1 日」的那一列（GitHub 同款）；网格起点落在月中间时该月不标记
+//   2. 月份行列距与格子严格同宽（span 宽 = --tks-size，pitch = 格子宽 + 3px gap）
+//   3. 格子尺寸按容器宽度自适应（--tks-size，4~12px），53 列不再溢出、无横向滚动条
+//   4. 列仍为「列尾 = 今天星期」的滚动 7 天，今天恒在最右下角（v5 保留）
 
 function h() { return React.createElement.apply(null, arguments) }
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
@@ -58,8 +58,8 @@ function tipText(cell) {
 }
 // 网格列数：53 列 ≈ 一年（与参考截图一致），最后一列以今天结尾
 const GRID_COLUMNS = 53
-// 组装滚动网格：每列 = 连续 7 天（上→下 = 早→晚），最后一列 = [今天-6 .. 今天]，
-// 今天恒在最右下角；向左每列再往前推 7 天，最左列 ≈ 53 周前。
+// 组装滚动网格：每列 = 连续 7 天（上→下 = 早→晚），列尾固定为今天的星期，
+// 最后一列 = [今天-6 .. 今天]，今天恒在最右下角；向左每列再往前推 7 天。
 function buildGrid(days, colCount) {
   const map = new Map()
   for (const d of days) map.set(d.date, d)
@@ -67,7 +67,7 @@ function buildGrid(days, colCount) {
   const weeks = []
   let max = 0
   for (let k = 0; k < colCount; k += 1) {
-    // 该列最后一天：今天 - 7*(colCount-1-k) 天
+    // 该列最后一天：今天 - 7*(colCount-1-k) 天（恒为今天的星期）
     const colEnd = new Date(today)
     colEnd.setDate(colEnd.getDate() - 7 * (colCount - 1 - k))
     const week = []
@@ -82,13 +82,25 @@ function buildGrid(days, colCount) {
     }
     weeks.push(week)
   }
-  // 每月标签：该列首日（顶格）与前一列顶格月份不同则标记
+  // 月份标签：锚定「包含该月 1 日」的那一列（与 GitHub 一致）；
+  // 网格起点落在月中间时，该月不标记。
   const monthLabels = []
-  let prevMonth = -1
+  const firstDay = new Date(weeks[0][0].date + 'T00:00:00')
+  firstDay.setDate(firstDay.getDate() - 1)
+  let lastLabelMonth = firstDay.getFullYear() * 12 + firstDay.getMonth()
   for (const w of weeks) {
-    const m = parseInt(w[0].date.slice(5, 7), 10)
-    monthLabels.push(m !== prevMonth ? m + '月' : '')
-    prevMonth = m
+    const f = new Date(w[0].date + 'T00:00:00')
+    const l = new Date(w[6].date + 'T00:00:00')
+    const mFirst = f.getFullYear() * 12 + f.getMonth()
+    const mLast = l.getFullYear() * 12 + l.getMonth()
+    let label = ''
+    for (let m = mFirst; m <= mLast; m += 1) {
+      if (m > lastLabelMonth) {
+        lastLabelMonth = m
+        if (label === '') label = ((m % 12) + 1) + '月'
+      }
+    }
+    monthLabels.push(label)
   }
   return { weeks: weeks, monthLabels: monthLabels, max: max }
 }
@@ -134,7 +146,27 @@ function StatCard(props) {
 }
 
 function Heatmap(props) {
+  const wrapRef = React.useRef(null)
   const g = buildGrid(props.days, GRID_COLUMNS)
+  // 宽度自适应：按容器宽度计算格子尺寸（--tks-size，4~12px），
+  // 保证 53 列总宽不超出容器（无横向滚动条）；直接改内联变量，不经 React state。
+  React.useLayoutEffect(() => {
+    const el = wrapRef.current
+    if (!el) return undefined
+    const fit = () => {
+      const avail = el.clientWidth
+      const size = Math.max(4, Math.min(12,
+        Math.floor((avail - 4 - (GRID_COLUMNS - 1) * 3) / GRID_COLUMNS)))
+      el.style.setProperty('--tks-size', size + 'px')
+    }
+    fit()
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(fit)
+      ro.observe(el)
+      return () => ro.disconnect()
+    }
+    return undefined
+  }, [])
   const colCount = g.weeks.length
   const columns = g.weeks.map((week, wi) =>
     h('div', { key: wi, className: 'tks-col' },
@@ -148,7 +180,7 @@ function Heatmap(props) {
           className: 'tks-cell tks-lv' + cellLevel(c.total, g.max) + edge,
         }, h('span', { className: 'tks-tip' }, tipText(c)))
       })))
-  return h('div', { className: 'tks-heatmap-wrap' },
+  return h('div', { ref: wrapRef, className: 'tks-heatmap-wrap' },
     h('div', { className: 'tks-heatmap' }, columns),
     h('div', { className: 'tks-months' },
       g.monthLabels.map((m, i) => h('span', { key: i }, m))),
@@ -241,7 +273,8 @@ const CSS = [
   '.tks-heatmap-wrap{overflow-x:auto;padding:32px 2px 8px}',
   '.tks-heatmap{display:flex;gap:3px}',
   '.tks-col{display:flex;flex-direction:column;gap:3px}',
-  '.tks-cell{width:10px;height:10px;border-radius:2px;display:inline-block;position:relative}',
+  // 格子尺寸由 Heatmap 按容器宽度计算（--tks-size），默认 10px
+  '.tks-cell{width:var(--tks-size,10px);height:var(--tks-size,10px);border-radius:2px;display:inline-block;position:relative}',
   '.tks-lv0{background:rgba(128,128,128,.14)}',
   '.tks-lv1{background:#f6c9b3}',
   '.tks-lv2{background:#ef9f7d}',
@@ -253,7 +286,8 @@ const CSS = [
   '.tks-tip-left .tks-tip{left:-3px;transform:none}',
   '.tks-tip-right .tks-tip{left:auto;right:-3px;transform:none}',
   '.tks-months{display:flex;gap:3px;margin-top:6px;font-size:10px;opacity:.55}',
-  '.tks-months span{width:13px;overflow:visible;white-space:nowrap}',
+  // span 宽 = 格子宽，pitch = 格子宽 + 3px gap，与热力网格严格同宽对齐
+  '.tks-months span{width:var(--tks-size,10px);overflow:visible;white-space:nowrap}',
   '.tks-legend{display:flex;align-items:center;gap:3px;font-size:11px;opacity:.6;margin-top:10px;justify-content:flex-end}',
   '.tks-runcard{font-size:13px;line-height:1.7}',
 ].join('\n')

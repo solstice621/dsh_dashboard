@@ -181,3 +181,32 @@ plan 第 7 节（web 会话中的 inspect→define→run 逐步流程、idPrefix
 - 首列首格 = 2025-08-10（今天-370 天）✅；首列月份标签「8月」✅
 - 带数据：max 取全局最大值、今天格/昨天格取值正确 ✅
 - `node --check` 语法通过 ✅
+
+---
+
+## 七、v6 迭代（2026-08-15）✅ 已部署
+
+> 部署完成：`pkg-14` / `run-14`（cordis_define kind=existing + update 激活）。
+> 运行确认：Host/Client 均 running、无诊断错误；`plugin.json` 已回填 `currentPackageId: pkg-14`。
+
+### 用户反馈（针对 v5 滚动视图）
+
+1. 底部出现横向拉动条（53 列固定 10px+3px gap ≈ 689px 超容器宽度；月份行 span 13px+3px gap
+   pitch=16px 比格子 13px 更宽，进一步撑大滚动宽度）；
+2. 月份标签与格子对不上：v5 标签取「该列顶格」的月份，滚动列跨月导致整体偏移
+   （如含 8月1日 的列顶格是 7月26日 → 标成 7月，8月 标签偏到下一列）。
+
+### 改动（仅 `client.js`，`host.js` 不变）
+
+| 项 | 实现 |
+| --- | --- |
+| 月份标签锚定 | 标签挂在「包含该月 1 日」的那一列（GitHub 同款）；网格起点落在月中间时该月不标记（`lastLabelMonth` 从首列首日前一天起算） |
+| 月份行同宽 | `.tks-months span{width:var(--tks-size,10px)}`，pitch = 格子宽 + 3px gap，与网格严格同宽 |
+| 宽度自适应 | `Heatmap` 用 wrapRef + `useLayoutEffect` 测容器宽，算格子尺寸 `--tks-size`（4~12px 夹逼）直接写内联变量（不经 React state，无渲染循环）；ResizeObserver 守卫跟随变化 |
+| 保留 | 列尾 = 今天星期（今天恒在最右下角）、悬停提示、FitValue、标签同高 |
+
+### 验证（本机 node，mock 今天=2026-08-15 周六 / 2026-08-12 周三）
+
+- 两种「今天」下均 53 列、最后一列底格 = 今天 ✅
+- 12 个月份标签，逐列校验「含该月 1 日」零错位；首标签 9月（网格始于 2025-08-10，8月 不标）✅
+- `node --check` 语法通过 ✅
