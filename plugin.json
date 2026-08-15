@@ -1,0 +1,20 @@
+{
+  "pluginId": "toksta-5",
+  "idPrefix": "toksta",
+  "name": "Token 用量统计（Codex 风格）",
+  "purpose": "聚合全部会话日志中的 token 用量与聊天时长，提供 Codex 风格仪表盘（5 统计卡 + 每日/每周/累计热力图）与 Run 卡片摘要。",
+  "platforms": ["host", "client"],
+  "currentPackageId": "pkg-11",
+  "packageHistory": [
+    { "packageId": "pkg-9",  "note": "首版部署（plan §6 原码 + console.warn 修正）" },
+    { "packageId": "pkg-10", "note": "修复 Client 渲染崩溃：组件内不可直接引用 ctx，timer 经模块级桥调用" },
+    { "packageId": "pkg-11", "note": "修复样式丢失：styles 是 Builtin 非 ctx Service，改为直接 styles.insert(CSS)" }
+  ],
+  "files": {
+    "host": "host.js",
+    "client": "client.js",
+    "plan": "plan.md",
+    "progress": "progress.md",
+    "readme": "README.md"
+  }
+}
