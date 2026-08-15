@@ -6,10 +6,14 @@
 //   - Host Service：sessionQuery（listSessions / readSession）
 //   - Host Event：  session/event（emit，(session, event)）、session/created（emit，(session)）
 //   - Host Builtin：harness（handle）
-// 版本：v5（随客户端 v21 一起部署 = pkg-29；v4 对应 pkg-23~28）
-// v5 变更：
-//   回补并行化：backfill 用 Promise.all 并发折叠全部会话（原为逐会话 await，窗口几十秒→约 2s）；
-//   配合客户端"扫描期不显示部分数字"，升级/重启后累计数不再跳变
+// 版本：v6（随客户端 v21 一起部署 = pkg-32；v5 对应 pkg-29）
+// v6 变更（修复「活跃会话 usage 不可见」——升级/重启后累计数骤降的根因）：
+//   竞争：插件启动后，活跃会话的 session/event 实时流先到达（seq 为日志顶端），把该会话
+//   lastSeq 推到顶；随后 backfill 的 readSession 全量快照回放时，水位线判断 seq<=lastSeq
+//   → 整个回放被跳过 → 只有实时流见过的尾部被统计（如 73 万 vs 真实 1.4 亿）。
+//   修复：每会话记录 liveFloor（实时流折叠过的最小 seq）；回放时 force 折叠
+//   seq < liveFloor 的头部事件（从未被折叠过），跳过实时流已覆盖的尾部——不重不漏。
+//   模拟验证：真实日志 + 实时尾部竞争，修复后与磁盘全量逐位相等（146,957,379）。
 
 function pad2(n) { return n < 10 ? '0' + n : '' + n }
 function dayKeyOf(time) {
@@ -49,17 +53,20 @@ return {
     function sessionRec(id, createdAt) {
       let rec = sessions.get(id)
       if (!rec) {
-        rec = { lastSeq: -1, tokens: 0, chatMs: 0, turns: 0, createdAt: createdAt || 0, model: null }
+        rec = {
+          lastSeq: -1, tokens: 0, chatMs: 0, turns: 0, createdAt: createdAt || 0,
+          model: null, liveFloor: Infinity, // 实时流折叠过的最小 seq（回放头部补折用）
+        }
         sessions.set(id, rec)
       }
       return rec
     }
 
-    function foldEvent(sessionId, event) {
+    function foldEvent(sessionId, event, force) {
       const rec = sessionRec(sessionId)
       if (typeof event.seq === 'number') {
-        if (event.seq <= rec.lastSeq) return
-        rec.lastSeq = event.seq
+        if (!force && event.seq <= rec.lastSeq) return
+        if (event.seq > rec.lastSeq) rec.lastSeq = event.seq
       }
       const type = event.type
       const data = event.data
@@ -118,12 +125,17 @@ return {
     }
 
     async function foldSession(id) {
+      const rec = sessionRec(id)
       try {
         const snap = await sessionQuery.readSession(id)
         const events = (snap && snap.events) || []
         for (let i = 0; i < events.length; i += 1) {
           if (disposed) return
-          foldEvent(id, events[i])
+          const ev = events[i]
+          // 实时流已覆盖尾部（seq >= liveFloor，折叠过且推进了 lastSeq）；
+          // 回放只 force 补折头部（seq < liveFloor，实时流从未见过）——不重不漏
+          if (typeof ev.seq === 'number' && ev.seq >= rec.liveFloor) continue
+          foldEvent(id, ev, true)
         }
         scannedSessions += 1
       } catch (e) {
@@ -154,9 +166,13 @@ return {
       }
     }
 
-    // 实时增量：水位线保证与回补不重复计数
+    // 实时增量：水位线保证与回补不重复计数；记录 liveFloor 供回放头部补折
     ctx.on('session/event', (session, event) => {
       if (!session || !event) return
+      const rec = sessionRec(session.id)
+      if (typeof event.seq === 'number') {
+        rec.liveFloor = Math.min(rec.liveFloor, event.seq)
+      }
       foldEvent(session.id, event)
     })
 
